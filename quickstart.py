@@ -52,12 +52,12 @@ def run_quick_demo():
     
     # Initialize with minimal settings for demo
     import torch
-    use_8bit = torch.cuda.is_available()
+    use_4bit = torch.cuda.is_available()
     
     try:
         pipeline = MaterialsPipeline(
-            llama_model_name="meta-llama/Llama-3.1-8B-Instruct",
-            use_8bit=use_8bit
+            llama_model_name="Qwen/Qwen2.5-7B-Instruct",
+            use_4bit=use_4bit
         )
         print("✓ Pipeline initialized")
     except Exception as e:

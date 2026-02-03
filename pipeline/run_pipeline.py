@@ -645,7 +645,7 @@ if __name__ == "__main__":
     print("Testing Materials Pipeline...")
     
     # Initialize (will load models)
-    pipeline = MaterialsPipeline(use_8bit=True)
+    pipeline = MaterialsPipeline(use_4bit=True)
     
     # Test run
     result = pipeline.run_materials_pipeline(

@@ -348,7 +348,7 @@ huggingface-cli login
 ### Issue: Out of memory
 **Solution**: Use 8-bit quantization
 ```python
-pipeline = MaterialsPipeline(use_8bit=True)
+pipeline = MaterialsPipeline(use_4bit=True)
 ```
 
 ### Issue: No papers retrieved

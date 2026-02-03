@@ -88,13 +88,13 @@ def load_pipeline():
     """Load the single shared pipeline. Cached to avoid reloading."""
     import torch
     
-    use_8bit = torch.cuda.is_available()
+    use_4bit = torch.cuda.is_available()
     
     pipeline = MaterialsPipeline(
-        llama_model_name="meta-llama/Llama-3.1-8B-Instruct",
+        llama_model_name="Qwen/Qwen2.5-7B-Instruct",
         qdrant_path="./qdrant_storage",
         embedding_model="all-MiniLM-L6-v2",
-        use_8bit=use_8bit
+        use_4bit=use_4bit
     )
     
     return pipeline
@@ -106,7 +106,7 @@ def display_header():
     st.markdown("""
     ### CIF Generation • Property Prediction • Safety-Enforced Synthesis
     
-    **Powered by:** Llama-3.1 • Qdrant • MatGL/AlignFF
+    **Powered by:** Qwen2.5-7B • Qdrant • MatGL/AlignFF
     
     ---
     """)
@@ -133,14 +133,39 @@ def display_sidebar():
     
     st.sidebar.markdown("---")
     
+    # Database management
+    st.sidebar.subheader("📚 Vector Database")
+    
+    # Get pipeline from cache if available
+    if 'pipeline' in st.session_state:
+        pipeline = st.session_state['pipeline']
+        try:
+            stats = pipeline.embedder.get_collection_stats()
+            paper_count = stats.get('points_count', 0)
+            
+            if paper_count > 0:
+                st.sidebar.success(f"✓ {paper_count} papers indexed")
+            else:
+                st.sidebar.warning("⚠ Database empty")
+                st.sidebar.info("Enable 'Scrape New Papers' to populate")
+        except Exception as e:
+            st.sidebar.error(f"Could not check database: {str(e)[:50]}")
+    
+    if st.sidebar.button("🔄 Populate Database"):
+        st.session_state['populate_db'] = True
+    
+    st.sidebar.markdown("---")
+    
     # System info
     st.sidebar.subheader("📊 System Info")
     import torch
     
     if torch.cuda.is_available():
         st.sidebar.success(f"✓ GPU: {torch.cuda.get_device_name(0)}")
+        st.sidebar.info(f"4-bit quantization: Enabled")
     else:
         st.sidebar.warning("⚠ No GPU available")
+        st.sidebar.info("Using CPU (slower)")
     
     return {
         'generate_cif': generate_cif,
@@ -412,10 +437,25 @@ def main():
     with st.spinner("Loading pipeline..."):
         try:
             pipeline = load_pipeline()
+            st.session_state['pipeline'] = pipeline  # Store for sidebar access
             st.success("✓ Pipeline loaded")
         except Exception as e:
             st.error(f"Failed to load pipeline: {e}")
             st.stop()
+    
+    # Handle database population if requested
+    if st.session_state.get('populate_db', False):
+        st.session_state['populate_db'] = False
+        
+        with st.spinner("Populating database from reaction.csv..."):
+            try:
+                paper_count = pipeline.populate_database_from_reactions(force_reload=False)
+                if paper_count > 0:
+                    st.success(f"✓ Database populated with {paper_count} papers!")
+                else:
+                    st.warning("Database already populated or no papers found")
+            except Exception as e:
+                st.error(f"Failed to populate database: {e}")
     
     # Sidebar
     options = display_sidebar()
@@ -464,7 +504,7 @@ def main():
     <div style='text-align: center; color: gray;'>
     <small>
     Materials Science RAG Platform | 
-    Powered by Llama-3.1, Qdrant, and Materials ML Models |
+    Powered by Qwen2.5-7B, Qdrant, and Materials ML Models |
     <b>UI Layer Only - All logic in shared pipeline</b>
     </small>
     </div>
