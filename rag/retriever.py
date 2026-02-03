@@ -11,7 +11,7 @@ class MaterialsRetriever:
         self,
         embedder: PaperEmbedder,
         default_top_k: int = 5,
-        score_threshold: float = 0.5
+        score_threshold: float = 0.2
     ):
         """
         Initialize retriever.
@@ -19,7 +19,7 @@ class MaterialsRetriever:
         Args:
             embedder: PaperEmbedder instance with loaded papers
             default_top_k: Default number of results to return
-            score_threshold: Minimum similarity score
+            score_threshold: Minimum similarity score (0.2 = filters noise, allows precursor papers)
         """
         self.embedder = embedder
         self.default_top_k = default_top_k
@@ -103,15 +103,53 @@ class MaterialsRetriever:
         """
         k = top_k if top_k is not None else self.default_top_k
         
-        # Construct comprehensive query
-        precursor_str = " ".join(precursors[:3])  # Limit to avoid too long query
-        query = f"{material} synthesis from {precursor_str} solid state reaction"
+        # Construct comprehensive query focusing on precursors AND material elements
+        # Extract base elements from precursors for better matching
+        import re
+        
+        precursor_elements = []
+        for prec in precursors[:3]:
+            if prec:
+                # Extract element symbols (pattern: Capital letter followed by optional lowercase)
+                elements = re.findall(r'[A-Z][a-z]?', prec)
+                # Take first 1-2 elements (usually the metal/main component)
+                precursor_elements.extend(elements[:2])
+        
+        # Remove duplicates while preserving order
+        seen = set()
+        unique_elements = [x for x in precursor_elements if not (x in seen or seen.add(x))]
+        
+        # Build query with material, elements, precursors, and relevant keywords
+        precursor_str = " ".join(precursors[:3])
+        element_str = " ".join(unique_elements[:4])  # Limit to 4 elements
+        
+        # Multi-part query for better retrieval
+        query = f"{material} {element_str} synthesis {precursor_str} solid-state reaction ceramic oxide preparation"
+        
+        # Debug: print query being used
+        print(f"  📝 Query: '{query}'")
+        print(f"  🔍 Searching with top_k={k}, score_threshold={self.score_threshold}")
         
         results = self.embedder.search(
             query=query,
             top_k=k,
             score_threshold=self.score_threshold
         )
+        
+        # If threshold is too restrictive and we got no results, try with lower threshold
+        if len(results) == 0 and self.score_threshold > 0.1:
+            print(f"  ⚠ No results with threshold {self.score_threshold}, retrying with 0.15...")
+            results = self.embedder.search(
+                query=query,
+                top_k=k,
+                score_threshold=0.15  # More permissive fallback
+            )
+        
+        print(f"  📊 Results found: {len(results)}")
+        if results:
+            print(f"  📄 Top result score: {results[0].get('score', 0):.4f}")
+            if len(results) > 1:
+                print(f"  📄 Lowest result score: {results[-1].get('score', 0):.4f}")
         
         return results
     

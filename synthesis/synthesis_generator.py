@@ -239,23 +239,33 @@ class SynthesisGenerator:
         context = "\n\n".join(context_parts)
         
         # Construct prompt for LLM
-        prompt = f"""Extract detailed synthesis information for {formula} from the following papers.
+        prompt = f"""You are a materials science expert analyzing scientific literature to guide synthesis of {formula}.
 
-Focus on:
-1. Specific temperatures (calcination, sintering, annealing)
-2. Exact heating rates and cooling rates
-3. Holding times at each temperature
-4. Atmosphere requirements (air, oxygen, nitrogen, argon, vacuum)
-5. Equipment used (furnace type, crucible material)
-6. Step-by-step procedure
-7. Precursor materials and their ratios
-8. Any special techniques or precautions
+⚠️ IMPORTANT: The papers below discuss RELATED MATERIALS and PRECURSORS, not {formula} specifically.
+This is EXPECTED and CORRECT - extract general synthesis knowledge that applies to similar compounds.
 
-Provide a concise but detailed synthesis procedure based on this literature.
+Your task:
+- Extract synthesis parameters from papers about related materials/precursors
+- Focus on techniques applicable to solid-state ceramic/oxide synthesis
+- Provide specific numbers where available (temperatures, rates, times)
+- Adapt the information reasonably for {formula}
+
+Extract these synthesis parameters:
+
+1. **Temperatures**: calcination, sintering, annealing temperatures (°C)
+2. **Heating/cooling rates**: ramp rates (°C/min)
+3. **Holding times**: duration at target temperature (hours)
+4. **Atmosphere**: air, O2, N2, Ar, vacuum, reducing conditions
+5. **Equipment**: furnace type, crucible material (alumina, platinum, etc.)
+6. **Precursor preparation**: drying, grinding, mixing techniques
+7. **Best practices**: optimization tips, common issues, troubleshooting
+
+Papers (related materials and precursors):
 
 {context}
 
-SYNTHESIS DETAILS:"""
+Based on these papers about related materials, provide synthesis guidance for {formula}:
+"""
         
         try:
             # Query LLM

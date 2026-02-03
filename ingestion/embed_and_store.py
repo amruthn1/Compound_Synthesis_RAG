@@ -224,12 +224,39 @@ class PaperEmbedder:
     
     def get_collection_stats(self) -> Dict:
         """Get statistics about the collection."""
-        collection_info = self.client.get_collection(self.collection_name)
-        return {
-            'name': self.collection_name,
-            'vectors_count': collection_info.vectors_count,
-            'points_count': collection_info.points_count
-        }
+        try:
+            collection_info = self.client.get_collection(self.collection_name)
+            
+            # Handle different Qdrant API versions
+            try:
+                # Newer Qdrant API (v1.8+) - nested in config
+                if hasattr(collection_info, 'points_count'):
+                    points_count = collection_info.points_count
+                elif hasattr(collection_info, 'vectors_count'):
+                    points_count = collection_info.vectors_count
+                else:
+                    # Fallback: count via scroll
+                    points, _ = self.client.scroll(
+                        collection_name=self.collection_name,
+                        limit=1
+                    )
+                    points_count = len(points)
+            except AttributeError:
+                # Oldest fallback
+                points_count = 0
+            
+            return {
+                'name': self.collection_name,
+                'points_count': points_count,
+                'vectors_count': points_count  # Same as points_count in most cases
+            }
+        except Exception as e:
+            print(f"Warning: Could not get collection stats: {e}")
+            return {
+                'name': self.collection_name,
+                'points_count': 0,
+                'vectors_count': 0
+            }
 
 
 if __name__ == "__main__":

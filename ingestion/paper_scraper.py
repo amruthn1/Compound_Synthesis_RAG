@@ -237,20 +237,21 @@ class PaperScraper:
             f"{material} solid state reaction",
         ]
         
-        # Add precursor queries
-        for precursor in precursors[:2]:  # Limit to avoid too many queries
-            queries.append(f"{material} {precursor} synthesis")
+        # Add individual precursor queries for better coverage
+        for precursor in precursors[:3]:  # Search for each precursor
+            queries.append(f"{precursor} synthesis preparation")
+            queries.append(f"{material} {precursor}")
         
-        # Search PubMed
-        for query in queries[:2]:  # Limit queries
+        # Search PubMed with diverse queries
+        for query in queries[:5]:  # Limit to 5 queries to avoid rate limits
             pmids = self.search_pubmed(query, max_results=max_per_source)
             for pmid in pmids[:max_per_source]:
                 paper = self.fetch_pubmed_paper(pmid)
                 if paper and paper.abstract:
                     all_papers.append(paper)
-                    if len(all_papers) >= max_per_source * 2:
+                    if len(all_papers) >= max_per_source * 3:  # Get more papers
                         break
-            if len(all_papers) >= max_per_source * 2:
+            if len(all_papers) >= max_per_source * 3:
                 break
         
         # Search arXiv for additional papers
