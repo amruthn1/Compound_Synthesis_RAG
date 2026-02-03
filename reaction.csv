@@ -1,0 +1,43 @@
+composition,precursors,reaction
+Ba2CI8Ni1Pb1,"BaCI2, NiCI2, PbCI2",2 BaCI2 + NiCI2 + PbCI2 ‚Üí Ba2CI8NiPb
+Cu2Eu2F9Rb1,"CuF2, EuF2, RbF",2 CuF2 + 2 EuF2 + RbF ‚Üí Cu2Eu2F9Rb
+Ba1Cs2F12Ni3,"BaF2, CsF, NiF2",BaF2 + 2 CsF + 3 NiF2 ‚Üí BaCs2F12Ni3
+Co1Cu1F10K2Ru1,"CoF2, CuF2, KF, RuF4",CoF2 + CuF2 + 2 KF + RuF4 ‚Üí CoCuF10K2Ru
+F4K1Na1Pd2,"KF, NaF, PdF2",KF + NaF + 2 PdF2 ‚Üí KNaPd2F4
+Ca5F11Ni2O1Zn1,"CaO, CaF2, NiF2, ZnF2",CaO + 4 CaF2 + 2 NiF2 + ZnF2 ‚Üí Ca5F11Ni2OZn
+Rb2Cu1Ag1F6,"RbF, CuF2, AgF2",2 RbF + CuF2 + AgF2 ‚Üí Rb2CuAgF6
+K2Cu4F10,"KF, CuF2",2 KF + 4 CuF2 ‚Üí K2Cu4F10
+Mg2Cu2O1F4,"Cu2O, MgF2",Cu2O + 2 MgF2 ‚Üí Mg2Cu2OF4
+Rb1Ca1Cu1Bi2O1F10,"CaO, BiF3, CuF2, RbF",CaO + 2 BiF3 + CuF2 + RbF ‚Üí CaBi2CuF10ORb
+K2Fe1F6,"KF, FeF3",2 KF + FeF3 ‚Üí K2FeF6
+K1Rb1Cu1Ag1F6,"KF, RbF, CuF2, AgF2",KF + RbF + CuF2 + AgF2 ‚Üí KRbAgCuF6
+Y1Mg1Cu1Ni2F11,"YF3, MgF2, CuF2, NiF2",YF3 + MgF2 + CuF2 + 2 NiF2 ‚Üí YMgCuNi2F11
+Cu1Sn2O1F8,"CuO, SnF4",CuO + 2 SnF4 ‚Üí CuSn2OF8
+Li1Ni1F6,"LiF, NiF5 (NiF3 + NiF2 mixture)",LiF + NiF5 ‚Üí LiNiF6
+Rb3V2F9,"RbF, VF3",3 RbF + 2 VF3 ‚Üí Rb3V2F9
+Rb1Tl1Cu2F6,"RbF, TlF, CuF2",RbF + TlF + 2 CuF2 ‚Üí RbTlCu2F6
+Rb1Ba1Li1Co1F6,"RbF, BaF2, LiF, CoF2",RbF + BaF2 + LiF + CoF2 ‚Üí RbBaLiCoF6
+Cu1Sn1F8,"CuF2, SnF4",CuF2 + SnF4 ‚Üí CuSnF8
+Ba2Ag1Fe1F6,"BaF2, AgF2, FeF2",2 BaF2 + AgF2 + FeF2 ‚Üí Ba2AgFeF6
+Sr1Ca2Fe1F8,"SrF2, CaF2, FeF2",SrF2 + 2 CaF2 + FeF2 ‚Üí SrCa2FeF8
+Ca4In2O2,"Ca, In2O3",4 Ca + In2O3 ‚Üí Ca4In2O2
+Rb1Fe1F6,"RbF, FeF5 (FeF3 + FeF2 mixture)",RbF + FeF5 ‚Üí RbFeF6
+Sr2Li1Cu1F6,"SrF2, LiF, CuF2",SrF2 + LiF + CuF2 ‚Üí Sr2LiCuF6
+K2Pr1Nd1Fe2F14,"KF, PrF3, NdF3, FeF3",2 KF + PrF3 + NdF3 + 2 FeF3 ‚Üí K2PrNdFe2F14
+Cs3K1Cu2Ag1F9,"CsF, KF, CuF2, AgF2",3 CsF + KF + 2 CuF2 + AgF2 ‚Üí Cs3KCu2AgF9
+Cs2K2Fe1F5,"CsF, KF, FeF3, FeF2",2 CsF + 2 KF + FeF3 + FeF2 ‚Üí Cs2K2FeF5
+Ni2Pb2F6,"NiF2, PbF2",2 NiF2 + 2 PbF2 ‚Üí Ni2Pb2F6
+Na3Cr1F4,"NaF, CrF3",3 NaF + CrF3 ‚Üí Na3CrF4
+Rb2Ba1Cu2F9,"RbF, BaF2, CuF2",2 RbF + BaF2 + 2 CuF2 ‚Üí Rb2BaCu2F9
+Sr1Cu1F5,"SrF2, CuF2, CuF",SrF2 + CuF2 + CuF ‚Üí SrCu2F5
+Li1Cu1Ag2F6,"LiF, CuF2, AgF2",LiF + CuF2 + 2 AgF2 ‚Üí LiCuAg2F6
+Ba1Ca1Cu1F5,"BaF2, CaF2, CuF2, CuF",BaF2 + CaF2 + CuF2 + CuF ‚Üí BaCaCu2F5
+Rb2Ag2F4,"RbF, AgF",2 RbF + 2 AgF ‚Üí Rb2Ag2F4
+Sr1Eu1Ni2F6,"SrF2, EuF3, NiF2",SrF2 + EuF3 + 2 NiF2 ‚Üí SrEuNi2F6
+Cs1Sr3Co1Ni1F9,"CsF, SrF2, CoF2, NiF2",CsF + 3 SrF2 + CoF2 + NiF2 ‚Üí CsSr3CoNiF9
+Cs3Mn1Fe1F7,"CsF, MnF2, FeF3",3 CsF + MnF2 + FeF3 ‚Üí Cs3MnFeF7
+Cu2Bi2Au1F13,"CuF2, BiF3, AuF3",2 CuF2 + 2 BiF3 + AuF3 ‚Üí Cu2Bi2AuF13
+Cs2Rb2Co2F8,"CsF, RbF, CoF2",2 CsF + 2 RbF + 2 CoF2 ‚Üí Cs2Rb2Co2F8
+Rb3Sr1Fe2Ag2F12,"RbF, SrF2, FeF3, AgF2",3 RbF + SrF2 + 2 FeF3 + 2 AgF2 ‚Üí Rb3SrFe2Ag2F12
+Cs2Rb2Cr2F12,"CsF, RbF, CrF3",2 CsF + 2 RbF + 2 CrF3 ‚Üí Cs2Rb2Cr2F12
+Cs2Ce4F14,"CsF, CeF3",Cs2Ce4F14

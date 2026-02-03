@@ -1,0 +1,37 @@
+# Materials Science RAG Platform - Requirements
+# Python 3.9+ required
+
+# Core ML/AI
+torch>=2.0.0
+transformers>=4.35.0
+sentence-transformers>=2.2.0
+accelerate>=0.24.0
+bitsandbytes>=0.41.0  # For 4-bit quantization
+
+# Vector Database
+qdrant-client>=1.7.0
+
+# Materials Science
+# matgl>=0.9.0  # Optional - may need specific installation
+pymatgen>=2023.10.0
+numpy>=1.24.0
+scipy>=1.11.0
+
+# Chemistry
+# Note: Some specialized packages may need manual installation
+
+# Data Processing
+pandas>=2.0.0
+requests>=2.31.0
+
+# Web Interface
+streamlit>=1.28.0
+plotly>=5.17.0
+
+# Utilities
+python-dotenv>=1.0.0
+tqdm>=4.66.0
+
+# Development
+jupyter>=1.0.0
+ipywidgets>=8.1.0
