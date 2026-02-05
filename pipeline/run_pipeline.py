@@ -144,8 +144,89 @@ class MaterialsPipeline:
         print("\n" + "="*80)
         print("PIPELINE READY")
         print("="*80)
-        print("\nℹ️  Vector database is empty. Use 'Scrape Papers' in sidebar to populate.")
+        print("\nℹ️  Loading papers from cache or scraping if needed...")
+        self._load_papers_with_cache()
         print("="*80 + "\n")
+    
+    def _load_papers_with_cache(self):
+        """Load papers from cache file or populate if cache doesn't exist."""
+        import json
+        import os
+        
+        cache_file = 'scraped_papers_cache.json'
+        
+        # Check if cache exists
+        if os.path.exists(cache_file):
+            try:
+                print(f"  📦 Loading papers from cache: {cache_file}")
+                with open(cache_file, 'r', encoding='utf-8') as f:
+                    cached_papers = json.load(f)
+                
+                # Load papers into vector database
+                paper_count = 0
+                for paper_data in cached_papers:
+                    try:
+                        self.embedder.add_paper(
+                            paper_id=paper_data['paper_id'],
+                            title=paper_data['title'],
+                            abstract=paper_data['abstract'],
+                            full_text=paper_data.get('full_text', ''),
+                            metadata=paper_data.get('metadata', {})
+                        )
+                        paper_count += 1
+                    except Exception as e:
+                        print(f"  ⚠ Failed to load paper {paper_data.get('paper_id', 'unknown')}: {e}")
+                
+                print(f"  ✓ Loaded {paper_count} papers from cache")
+                return
+            except Exception as e:
+                print(f"  ⚠ Cache load failed: {e}")
+                print(f"  Will create new cache...")
+        else:
+            print(f"  ℹ️  No cache found. Papers must be scraped manually via 'Populate Database' button.")
+    
+    def save_papers_to_cache(self):
+        """Save all papers from vector database to cache file."""
+        import json
+        
+        cache_file = 'scraped_papers_cache.json'
+        
+        try:
+            # Get all papers from vector database
+            stats = self.embedder.get_collection_stats()
+            paper_count = stats.get('points_count', 0)
+            
+            if paper_count == 0:
+                print("  No papers to cache")
+                return
+            
+            # Retrieve all papers
+            all_papers = []
+            scroll_result = self.embedder.client.scroll(
+                collection_name=self.embedder.collection_name,
+                limit=paper_count
+            )
+            
+            for point in scroll_result[0]:
+                paper_data = {
+                    'paper_id': str(point.id),
+                    'title': point.payload.get('title', ''),
+                    'abstract': point.payload.get('abstract', ''),
+                    'full_text': point.payload.get('full_text', ''),
+                    'metadata': point.payload.get('metadata', {})
+                }
+                all_papers.append(paper_data)
+            
+            # Save to JSON file
+            with open(cache_file, 'w', encoding='utf-8') as f:
+                json.dump(all_papers, f, indent=2, ensure_ascii=False)
+            
+            print(f"  ✓ Saved {len(all_papers)} papers to {cache_file}")
+            return len(all_papers)
+            
+        except Exception as e:
+            print(f"  ✗ Failed to save cache: {e}")
+            return 0
     
     def populate_database_from_reactions(self, force_reload: bool = False, progress_callback=None):
         """
@@ -173,11 +254,19 @@ class MaterialsPipeline:
         print(f"Current database entries: {current_count}")
         print(f"Starting paper scraping...")
         
-        # Force reload by temporarily clearing the check
+        # Scrape papers
         self._load_sample_reactions_to_db(progress_callback=progress_callback)
         
         # Check final status
         final_stats = self.embedder.get_collection_stats()
+        final_count = final_stats.get('points_count', 0)
+        
+        # Save to cache after successful scraping
+        if final_count > 0:
+            print(f"\n  💾 Saving {final_count} papers to cache...")
+            self.save_papers_to_cache()
+        
+        return final_count
         final_count = final_stats.get('points_count', 0)
         
         print("\n" + "="*80)

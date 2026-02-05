@@ -228,6 +228,24 @@ def display_sidebar():
     # Database management
     st.sidebar.subheader("📚 Vector Database")
     
+    # Check for cache file
+    import os
+    cache_file = 'scraped_papers_cache.json'
+    cache_exists = os.path.exists(cache_file)
+    
+    if cache_exists:
+        import json
+        try:
+            with open(cache_file, 'r') as f:
+                cached_papers = json.load(f)
+            st.sidebar.info(f"💾 Cache: {len(cached_papers)} papers stored")
+        except:
+            st.sidebar.warning("⚠ Cache file corrupted")
+    else:
+        st.sidebar.warning("📦 No cache file - papers need scraping")
+    
+    st.sidebar.markdown("---")
+    
     # Get pipeline from cache if available
     if 'pipeline' in st.session_state:
         pipeline = st.session_state['pipeline']
@@ -239,12 +257,29 @@ def display_sidebar():
                 st.sidebar.success(f"✓ {paper_count} papers indexed")
             else:
                 st.sidebar.warning("⚠ Database empty")
-                st.sidebar.info("Enable 'Scrape New Papers' to populate")
+                if cache_exists:
+                    st.sidebar.info("Papers loaded from cache on init")
+                else:
+                    st.sidebar.info("Enable 'Scrape New Papers' to populate")
         except Exception as e:
             st.sidebar.error(f"Could not check database: {str(e)[:50]}")
     
     if st.sidebar.button("🔄 Populate Database"):
         st.session_state['populate_db'] = True
+    
+    # Add button to save current papers to cache
+    if st.sidebar.button("💾 Save Papers to Cache"):
+        if 'pipeline' in st.session_state:
+            pipeline = st.session_state['pipeline']
+            try:
+                count = pipeline.save_papers_to_cache()
+                if count > 0:
+                    st.sidebar.success(f"✓ Saved {count} papers to cache")
+                    st.sidebar.info("Commit scraped_papers_cache.json to Git!")
+                else:
+                    st.sidebar.warning("No papers to save")
+            except Exception as e:
+                st.sidebar.error(f"Save failed: {str(e)[:50]}")
     
     st.sidebar.markdown("---")
     
