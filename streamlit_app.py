@@ -223,12 +223,15 @@ def display_input_section():
     """Display input section for material composition."""
     st.header("📝 Input Material")
     
+    # Show dataset info
+    samples = load_sample_materials()
+    st.info(f"📊 Dataset: {len(samples)} materials available in reaction.csv")
+    
     col1, col2 = st.columns(2)
     
     with col1:
         # Load samples to set default
-        samples = load_sample_materials()
-        default_value = samples[0] if samples else "K2Cu4F10"
+        default_value = "K2Cu4F10"
         
         composition = st.text_input(
             "Chemical Formula",
@@ -238,7 +241,6 @@ def display_input_section():
     
     with col2:
         # Load sample materials from reaction.csv
-        samples = load_sample_materials()
         selected_sample = st.selectbox(
             "Or select from reaction.csv:",
             ["Custom"] + samples,
@@ -251,6 +253,11 @@ def display_input_section():
     # Substitutions
     st.subheader("🔄 Element Substitutions (Optional)")
     
+    # Get suggestions based on composition
+    suggestions = get_suggested_substitutions(composition)
+    if suggestions:
+        st.caption(f"💡 Suggested for {composition}: {', '.join(suggestions)}")
+    
     col1, col2 = st.columns(2)
     
     with col1:
@@ -261,9 +268,12 @@ def display_input_section():
         with col2:
             st.markdown("Enter substitutions as `old:new` (e.g., Ti:Zr)")
         
+        # Pre-fill with first suggestion if available
+        default_sub = suggestions[0] if suggestions else ""
+        
         sub_text = st.text_input(
             "Substitution",
-            value="",
+            value=default_sub,
             help="Format: Ti:Zr to replace Ti with Zr"
         )
         
@@ -473,6 +483,11 @@ def display_literature_section(result: PipelineResult):
 def display_explorer_page(pipeline):
     """Interactive material variation explorer."""
     st.header("🎨 Material Variation Explorer")
+    
+    # Show dataset info
+    samples = load_sample_materials()
+    st.info(f"📊 Dataset: {len(samples)} materials available in reaction.csv")
+    
     st.markdown("""
     Generate and compare material variations with AlignFF-relaxed structures and predicted properties.
     All structures are automatically relaxed before property prediction.
@@ -490,24 +505,51 @@ def display_explorer_page(pipeline):
     with col2:
         st.metric("Relaxation Method", "AlignFF", help="All structures are automatically relaxed")
     
+    # Get suggested substitutions
+    suggestions = get_suggested_substitutions(base_material)
+    if suggestions:
+        st.info(f"💡 Common substitutions for {base_material}: {', '.join(suggestions)}")
+    
     st.subheader("Select Element Substitutions")
+    
+    # Determine which checkboxes to pre-select based on composition
+    from pymatgen.core import Composition
+    try:
+        comp = Composition(base_material)
+        elements_in_material = [str(el) for el in comp.elements]
+        
+        # Pre-select relevant substitutions
+        default_cu_ni = 'Cu' in elements_in_material
+        default_cu_ag = 'Cu' in elements_in_material
+        default_cu_zn = 'Cu' in elements_in_material
+        default_k_na = 'K' in elements_in_material
+        default_k_li = 'K' in elements_in_material
+        default_f_cl = 'F' in elements_in_material
+    except:
+        # Fallback defaults for K2Cu4F10
+        default_cu_ni = True
+        default_cu_ag = True
+        default_cu_zn = True
+        default_k_na = False
+        default_k_li = False
+        default_f_cl = False
     
     # Predefined substitution options
     col1, col2, col3 = st.columns(3)
     
     with col1:
         st.markdown("**Transition Metals**")
-        sub_cu_ni = st.checkbox("Cu → Ni", value=True)
-        sub_cu_ag = st.checkbox("Cu → Ag", value=True)
-        sub_cu_zn = st.checkbox("Cu → Zn", value=True)
+        sub_cu_ni = st.checkbox("Cu → Ni", value=default_cu_ni)
+        sub_cu_ag = st.checkbox("Cu → Ag", value=default_cu_ag)
+        sub_cu_zn = st.checkbox("Cu → Zn", value=default_cu_zn)
         sub_cu_co = st.checkbox("Cu → Co")
         sub_fe_co = st.checkbox("Fe → Co")
         sub_fe_ni = st.checkbox("Fe → Ni")
     
     with col2:
         st.markdown("**Alkali/Alkaline Earth**")
-        sub_k_na = st.checkbox("K → Na")
-        sub_k_li = st.checkbox("K → Li")
+        sub_k_na = st.checkbox("K → Na", value=default_k_na)
+        sub_k_li = st.checkbox("K → Li", value=default_k_li)
         sub_k_rb = st.checkbox("K → Rb")
         sub_na_li = st.checkbox("Na → Li")
         sub_ca_sr = st.checkbox("Ca → Sr")
@@ -518,7 +560,10 @@ def display_explorer_page(pipeline):
         sub_ti_zr = st.checkbox("Ti → Zr")
         sub_ti_hf = st.checkbox("Ti → Hf")
         sub_o_s = st.checkbox("O → S")
-        sub_o_se = st.checkbox("O → Se")
+        sub_f_cl = st.checkbox("F → Cl", value=default_f_cl)
+        sub_ti_hf = st.checkbox("Ti → Hf")
+        sub_o_s = st.checkbox("O → S")
+        sub_f_cl = st.checkbox("F → Cl", value=default_f_cl)
     
     # Collect selected substitutions
     substitutions_map = {
