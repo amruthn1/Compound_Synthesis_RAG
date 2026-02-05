@@ -1279,108 +1279,38 @@ def display_synthesis_section(result: PipelineResult):
         col1, col2 = st.columns(2)
         
         with col1:
+            st.markdown("## 🔥 Reaction Conditions")
+            
             # Temperature Section
             if conditions['temperature']:
-                st.markdown("### 📊 **Temperature**")
-                temp_content = ""
-                for line in conditions['temperature']:
-                    # Bold all headings and key terms
-                    line = line.replace('Detailed Heating Schedule:', '**Detailed Heating Schedule:**')
-                    line = line.replace('DETAILED HEATING SCHEDULE:', '**DETAILED HEATING SCHEDULE:**')
-                    line = line.replace('Target:', '**Target:**')
-                    line = line.replace('Typical range:', '**Typical range:**')
-                    line = line.replace('Heating rate:', '**Heating rate:**')
-                    line = line.replace('Hold time:', '**Hold time:**')
-                    line = line.replace('Cooling rate:', '**Cooling rate:**')
-                    line = line.replace('Recommended target:', '**Recommended target:**')
-                    line = line.replace('Total cycle time:', '**Total cycle time:**')
-                    line = line.replace('Phase 1:', '**Phase 1:**')
-                    line = line.replace('Phase 2:', '**Phase 2:**')
-                    line = line.replace('Phase 3:', '**Phase 3:**')
-                    line = line.replace('Phase 4:', '**Phase 4:**')
-                    line = line.replace('Phase 5:', '**Phase 5:**')
-                    temp_content += line + "\n\n"
-                st.markdown(temp_content)
+                st.markdown("**Temperature:** " + " ".join(conditions['temperature']))
+                st.markdown("")
             
-            # ⭐ CRITICAL: Pressure Section - BIG BOLD
+            # Pressure Section (CRITICAL)
             if conditions['pressure']:
-                st.markdown("---")
-                st.markdown("## 🔧 **PRESSURE** 🔧")
-                pressure_content = ""
-                for line in conditions['pressure']:
-                    line = line.replace('Ambient pressure', '**✓ Ambient pressure**')
-                    # Make all pressure lines bold
-                    if line.strip() and not line.strip().startswith('**'):
-                        line = f"**{line}**"
-                    pressure_content += line + "\n\n"
-                st.markdown(pressure_content)
+                st.markdown("**Pressure:** " + " ".join(conditions['pressure']))
+                st.markdown("")
             
-            # ⭐ CRITICAL: Time Required Section - BIG BOLD
-            if conditions['time_required']:
-                st.markdown("---")
-                st.markdown("## ⏱️ **TIME REQUIRED** ⏱️")
-                time_content = ""
-                for line in conditions['time_required']:
-                    # Bold phases
-                    line = line.replace('Heating phase:', '**⏰ Heating phase:**')
-                    line = line.replace('Reaction phase:', '**⏰ Reaction phase:**')
-                    line = line.replace('Cooling phase:', '**⏰ Cooling phase:**')
-                    line = line.replace('Total estimated time:', '**⏰ Total estimated time:**')
-                    line = line.replace('Multiple cycles', '**🔄 Multiple cycles**')
-                    # Ensure all lines are bold
-                    if line.strip() and not line.strip().startswith('**'):
-                        line = f"**{line}**"
-                    time_content += line + "\n\n"
-                st.markdown(time_content)
-        
-        with col2:
             # Atmosphere Section
             if conditions['atmosphere']:
-                st.markdown("### 🌬️ **Atmosphere**")
-                atm_content = ""
-                for line in conditions['atmosphere']:
-                    # Bold all headings and key terms
-                    line = line.replace('Atmosphere Control:', '**Atmosphere Control:**')
-                    line = line.replace('ATMOSPHERE:', '**ATMOSPHERE:**')
-                    line = line.replace('Furnace Loading Procedure:', '**Furnace Loading Procedure:**')
-                    line = line.replace('Procedure:', '**Procedure:**')
-                    line = line.replace('Inert atmosphere', '**Inert atmosphere**')
-                    line = line.replace('Air or O2', '**Air or O2**')
-                    line = line.replace('Flow rate:', '**Flow rate:**')
-                    line = line.replace('Gas purity:', '**Gas purity:**')
-                    line = line.replace('CRITICAL:', '**⚠️ CRITICAL:**')
-                    line = line.replace('WARNING:', '**⚠️ WARNING:**')
-                    atm_content += line + "\n\n"
-                st.markdown(atm_content)
+                st.markdown("**Atmosphere:** " + " ".join(conditions['atmosphere']))
+                st.markdown("")
             
-            # ⭐ CRITICAL: Synthesis Method Section - BIG BOLD
+            # Time Required Section (CRITICAL)
+            if conditions['time_required']:
+                st.markdown("**Time Required:** " + " ".join(conditions['time_required']))
+        
+        with col2:
+            st.markdown("## 🧪 Method & Type")
+            
+            # Synthesis Method Section (CRITICAL)
             if conditions['synthesis_method']:
-                st.markdown("---")
-                st.markdown("## 🧪 **SYNTHESIS METHOD** 🧪")
-                method_content = ""
-                for line in conditions['synthesis_method']:
-                    line = line.replace('Solid-state reaction', '**✓ Solid-state reaction**')
-                    # Make all method lines bold
-                    if line.strip() and not line.strip().startswith('**'):
-                        line = f"**{line}**"
-                    method_content += line + "\n\n"
-                st.markdown(method_content)
+                st.markdown("**Synthesis Method:** " + " ".join(conditions['synthesis_method']))
+                st.markdown("")
             
-            # ⭐ CRITICAL: Reaction Type Section - BIG BOLD
+            # Reaction Type Section (CRITICAL)
             if conditions['reaction_type']:
-                st.markdown("---")
-                st.markdown("## 🔬 **REACTION TYPE** 🔬")
-                reaction_content = ""
-                for line in conditions['reaction_type']:
-                    # Bold the reaction equation and headings
-                    line = line.replace('Reaction:', '**⚗️ Reaction:**')
-                    if '→' in line and not line.startswith('**'):
-                        line = f"**{line}**"
-                    # Ensure all lines are bold
-                    if line.strip() and not line.strip().startswith('**'):
-                        line = f"**{line}**"
-                    reaction_content += line + "\n\n"
-                st.markdown(reaction_content)
+                st.markdown("**Reaction Type:** " + " ".join(conditions['reaction_type']))
     
     # Structured Steps Tab
     with synthesis_tabs[1]:
