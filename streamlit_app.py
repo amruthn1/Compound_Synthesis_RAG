@@ -1196,38 +1196,50 @@ def parse_reaction_conditions(protocol_text: str) -> dict:
     
     lines = protocol_text.split('\n')
     current_section = None
+    in_reaction_section = False
     
     for line in lines:
         line_stripped = line.strip()
         
-        # Detect section headers
-        if '📊 Temperature:' in line or 'Temperature:' in line:
+        # Start capturing when we see the reaction conditions header
+        if '🔥 REACTION CONDITIONS' in line_stripped:
+            in_reaction_section = True
+            continue
+        
+        # Stop capturing when we hit the next major section
+        if line_stripped.startswith('1. SAFETY') or line_stripped.startswith('2. MATERIALS') or line_stripped.startswith('3. DETAILED'):
+            break
+        
+        # Only process lines if we're in the reaction conditions section
+        if not in_reaction_section:
+            continue
+        
+        # Skip separator lines
+        if line_stripped.startswith('===') or line_stripped.startswith('---'):
+            continue
+        
+        # Detect section headers (must match exactly at start)
+        if line_stripped.startswith('📊 Temperature:'):
             current_section = 'temperature'
             continue
-        elif '🔧 Pressure:' in line or 'Pressure:' in line:
+        elif line_stripped.startswith('🔧 Pressure:'):
             current_section = 'pressure'
             continue
-        elif '🌬️ Atmosphere:' in line or 'Atmosphere:' in line:
+        elif line_stripped.startswith('🌬️ Atmosphere:'):
             current_section = 'atmosphere'
             continue
-        elif '⏱️ Time Required:' in line or 'Time Required:' in line:
+        elif line_stripped.startswith('⏱️ Time Required:'):
             current_section = 'time_required'
             continue
-        elif '🧪 Synthesis Method:' in line or 'Synthesis Method:' in line:
+        elif line_stripped.startswith('🧪 Synthesis Method:'):
             current_section = 'synthesis_method'
             continue
-        elif '🔬 Reaction Type:' in line or 'Reaction Type:' in line:
+        elif line_stripped.startswith('🔬 Reaction Type:'):
             current_section = 'reaction_type'
-            continue
-        elif line_stripped.startswith('===') or line_stripped.startswith('---'):
-            current_section = None
-            continue
-        elif line_stripped.startswith('🔥 REACTION CONDITIONS') or line_stripped.startswith('1. SAFETY'):
-            current_section = None
             continue
         
         # Add content to current section
-        if current_section and line_stripped and not line_stripped.startswith('##'):
+        if current_section and line_stripped:
             conditions[current_section].append(line_stripped)
     
     return conditions
