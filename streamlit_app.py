@@ -1275,46 +1275,80 @@ def display_synthesis_section(result: PipelineResult):
         # Parse reaction conditions from protocol
         conditions = parse_reaction_conditions(result.synthesis_protocol)
         
-        # Temperature Section
-        if conditions['temperature']:
-            st.markdown("### 📊 **Temperature**")
-            for line in conditions['temperature']:
-                st.markdown(line)
-            st.markdown("---")
+        # Use columns for side-by-side display
+        col1, col2 = st.columns(2)
         
-        # Pressure Section
-        if conditions['pressure']:
-            st.markdown("### 🔧 **Pressure**")
-            for line in conditions['pressure']:
-                st.markdown(line)
-            st.markdown("---")
+        with col1:
+            # Temperature Section
+            if conditions['temperature']:
+                st.markdown("### 📊 **Temperature**")
+                temp_content = ""
+                for line in conditions['temperature']:
+                    # Bold key terms
+                    line = line.replace('Target:', '**Target:**')
+                    line = line.replace('Typical range:', '**Typical range:**')
+                    line = line.replace('Heating rate:', '**Heating rate:**')
+                    line = line.replace('Hold time:', '**Hold time:**')
+                    line = line.replace('Cooling rate:', '**Cooling rate:**')
+                    line = line.replace('Recommended target:', '**Recommended target:**')
+                    temp_content += line + "\n\n"
+                st.markdown(temp_content)
+            
+            # Pressure Section
+            if conditions['pressure']:
+                st.markdown("### 🔧 **Pressure**")
+                pressure_content = ""
+                for line in conditions['pressure']:
+                    line = line.replace('Ambient pressure', '**Ambient pressure**')
+                    pressure_content += line + "\n\n"
+                st.markdown(pressure_content)
+            
+            # Time Required Section
+            if conditions['time_required']:
+                st.markdown("### ⏱️ **Time Required**")
+                time_content = ""
+                for line in conditions['time_required']:
+                    # Bold phases
+                    line = line.replace('Heating phase:', '**Heating phase:**')
+                    line = line.replace('Reaction phase:', '**Reaction phase:**')
+                    line = line.replace('Cooling phase:', '**Cooling phase:**')
+                    line = line.replace('Total estimated time:', '**Total estimated time:**')
+                    time_content += line + "\n\n"
+                st.markdown(time_content)
         
-        # Atmosphere Section
-        if conditions['atmosphere']:
-            st.markdown("### 🌬️ **Atmosphere**")
-            for line in conditions['atmosphere']:
-                st.markdown(line)
-            st.markdown("---")
-        
-        # Time Required Section
-        if conditions['time_required']:
-            st.markdown("### ⏱️ **Time Required**")
-            for line in conditions['time_required']:
-                st.markdown(line)
-            st.markdown("---")
-        
-        # Synthesis Method Section
-        if conditions['synthesis_method']:
-            st.markdown("### 🧪 **Synthesis Method**")
-            for line in conditions['synthesis_method']:
-                st.markdown(line)
-            st.markdown("---")
-        
-        # Reaction Type Section
-        if conditions['reaction_type']:
-            st.markdown("### 🔬 **Reaction Type**")
-            for line in conditions['reaction_type']:
-                st.markdown(line)
+        with col2:
+            # Atmosphere Section
+            if conditions['atmosphere']:
+                st.markdown("### 🌬️ **Atmosphere**")
+                atm_content = ""
+                for line in conditions['atmosphere']:
+                    # Bold key terms
+                    line = line.replace('Inert atmosphere', '**Inert atmosphere**')
+                    line = line.replace('Air or O2', '**Air or O2**')
+                    line = line.replace('Flow rate:', '**Flow rate:**')
+                    line = line.replace('Gas purity:', '**Gas purity:**')
+                    atm_content += line + "\n\n"
+                st.markdown(atm_content)
+            
+            # Synthesis Method Section
+            if conditions['synthesis_method']:
+                st.markdown("### 🧪 **Synthesis Method**")
+                method_content = ""
+                for line in conditions['synthesis_method']:
+                    line = line.replace('Solid-state reaction', '**Solid-state reaction**')
+                    method_content += line + "\n\n"
+                st.markdown(method_content)
+            
+            # Reaction Type Section
+            if conditions['reaction_type']:
+                st.markdown("### 🔬 **Reaction Type**")
+                reaction_content = ""
+                for line in conditions['reaction_type']:
+                    # Bold the reaction equation
+                    if '→' in line:
+                        line = f"**{line}**"
+                    reaction_content += line + "\n\n"
+                st.markdown(reaction_content)
     
     # Structured Steps Tab
     with synthesis_tabs[1]:
