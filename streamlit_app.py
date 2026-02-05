@@ -1268,49 +1268,78 @@ def display_synthesis_section(result: PipelineResult):
     # Create sub-tabs for different views
     synthesis_tabs = st.tabs(["🔥 Reaction Conditions", "📋 Detailed Steps", "📄 Full Protocol"])
     
-    # Reaction Conditions Tab (NEW - formatted nicely)
+    # Reaction Conditions Tab (Clean layout matching specification)
     with synthesis_tabs[0]:
-        st.subheader("🔥 Reaction Conditions & Method")
+        # Page title
+        st.markdown(
+            '<h1 style="font-size: 36px; font-weight: bold; color: white; margin-bottom: 30px;">Comprehensive Synthesis Protocol</h1>',
+            unsafe_allow_html=True
+        )
+        
+        # Divider line
+        st.markdown('<hr style="border: 1px solid #444; margin-bottom: 30px;">', unsafe_allow_html=True)
         
         # Parse reaction conditions from protocol
         conditions = parse_reaction_conditions(result.synthesis_protocol)
         
         # Use columns for side-by-side display
-        col1, col2 = st.columns(2)
+        col1, col2 = st.columns([1, 1])
         
         with col1:
-            st.markdown("## 🔥 Reaction Conditions")
+            # Section header with emoji
+            st.markdown(
+                '<h2 style="font-size: 28px; font-weight: bold; color: white; margin-bottom: 20px;">🔥 Reaction Conditions</h2>',
+                unsafe_allow_html=True
+            )
             
             # Temperature Section
             if conditions['temperature']:
-                st.markdown("**Temperature:** " + " ".join(conditions['temperature']))
-                st.markdown("")
+                st.markdown(
+                    f'<p style="font-size: 16px; line-height: 1.6; margin-bottom: 20px;"><b>Temperature:</b> {" ".join(conditions["temperature"])}</p>',
+                    unsafe_allow_html=True
+                )
             
-            # Pressure Section (CRITICAL)
+            # Pressure Section
             if conditions['pressure']:
-                st.markdown("**Pressure:** " + " ".join(conditions['pressure']))
-                st.markdown("")
+                st.markdown(
+                    f'<p style="font-size: 16px; line-height: 1.6; margin-bottom: 20px;"><b>Pressure:</b> {" ".join(conditions["pressure"])}</p>',
+                    unsafe_allow_html=True
+                )
             
             # Atmosphere Section
             if conditions['atmosphere']:
-                st.markdown("**Atmosphere:** " + " ".join(conditions['atmosphere']))
-                st.markdown("")
+                st.markdown(
+                    f'<p style="font-size: 16px; line-height: 1.6; margin-bottom: 20px;"><b>Atmosphere:</b> {" ".join(conditions["atmosphere"])}</p>',
+                    unsafe_allow_html=True
+                )
             
-            # Time Required Section (CRITICAL)
+            # Time Required Section
             if conditions['time_required']:
-                st.markdown("**Time Required:** " + " ".join(conditions['time_required']))
+                st.markdown(
+                    f'<p style="font-size: 16px; line-height: 1.6; margin-bottom: 20px;"><b>Time Required:</b> {" ".join(conditions["time_required"])}</p>',
+                    unsafe_allow_html=True
+                )
         
         with col2:
-            st.markdown("## 🧪 Method & Type")
+            # Section header with emoji
+            st.markdown(
+                '<h2 style="font-size: 28px; font-weight: bold; color: white; margin-bottom: 20px;">🧪 Method & Type</h2>',
+                unsafe_allow_html=True
+            )
             
-            # Synthesis Method Section (CRITICAL)
+            # Synthesis Method Section
             if conditions['synthesis_method']:
-                st.markdown("**Synthesis Method:** " + " ".join(conditions['synthesis_method']))
-                st.markdown("")
+                st.markdown(
+                    f'<p style="font-size: 16px; line-height: 1.6; margin-bottom: 20px;"><b>Synthesis Method:</b> {" ".join(conditions["synthesis_method"])}</p>',
+                    unsafe_allow_html=True
+                )
             
-            # Reaction Type Section (CRITICAL)
+            # Reaction Type Section
             if conditions['reaction_type']:
-                st.markdown("**Reaction Type:** " + " ".join(conditions['reaction_type']))
+                st.markdown(
+                    f'<p style="font-size: 16px; line-height: 1.6; margin-bottom: 20px;"><b>Reaction Type:</b> {" ".join(conditions["reaction_type"])}</p>',
+                    unsafe_allow_html=True
+                )
     
     # Structured Steps Tab
     with synthesis_tabs[1]:
