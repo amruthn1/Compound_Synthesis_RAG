@@ -1272,15 +1272,22 @@ def display_synthesis_section(result: PipelineResult):
     with synthesis_tabs[0]:
         # Page title
         st.markdown(
-            '<h1 style="font-size: 36px; font-weight: bold; color: white; margin-bottom: 30px;">Comprehensive Synthesis Protocol</h1>',
+            '<h1 style="font-size: 36px; font-weight: bold; color: #000000; margin-bottom: 30px;">Comprehensive Synthesis Protocol</h1>',
             unsafe_allow_html=True
         )
         
         # Divider line
-        st.markdown('<hr style="border: 1px solid #444; margin-bottom: 30px;">', unsafe_allow_html=True)
+        st.markdown('<hr style="border: 1px solid #cccccc; margin-bottom: 30px;">', unsafe_allow_html=True)
         
         # Parse reaction conditions from protocol
         conditions = parse_reaction_conditions(result.synthesis_protocol)
+        
+        # Debug: Show what was parsed
+        st.write("DEBUG - Parsed conditions:")
+        for key, val in conditions.items():
+            st.write(f"{key}: {len(val)} items")
+            if val:
+                st.write(f"  First item: {val[0][:100] if val[0] else 'empty'}...")
         
         # Use columns for side-by-side display
         col1, col2 = st.columns([1, 1])
@@ -1288,58 +1295,76 @@ def display_synthesis_section(result: PipelineResult):
         with col1:
             # Section header with emoji
             st.markdown(
-                '<h2 style="font-size: 28px; font-weight: bold; color: white; margin-bottom: 20px;">🔥 Reaction Conditions</h2>',
+                '<h2 style="font-size: 28px; font-weight: bold; color: #000000; margin-bottom: 20px;">🔥 Reaction Conditions</h2>',
                 unsafe_allow_html=True
             )
             
             # Temperature Section
             if conditions['temperature']:
+                temp_text = " ".join(conditions['temperature'])
                 st.markdown(
-                    f'<p style="font-size: 16px; line-height: 1.6; margin-bottom: 20px;"><b>Temperature:</b> {" ".join(conditions["temperature"])}</p>',
+                    f'<p style="font-size: 16px; line-height: 1.8; margin-bottom: 25px; color: #000000;"><strong>Temperature:</strong> {temp_text}</p>',
                     unsafe_allow_html=True
                 )
+            else:
+                st.write("No temperature data")
             
             # Pressure Section
             if conditions['pressure']:
+                pressure_text = " ".join(conditions['pressure'])
                 st.markdown(
-                    f'<p style="font-size: 16px; line-height: 1.6; margin-bottom: 20px;"><b>Pressure:</b> {" ".join(conditions["pressure"])}</p>',
+                    f'<p style="font-size: 16px; line-height: 1.8; margin-bottom: 25px; color: #000000;"><strong>Pressure:</strong> {pressure_text}</p>',
                     unsafe_allow_html=True
                 )
+            else:
+                st.write("No pressure data")
             
             # Atmosphere Section
             if conditions['atmosphere']:
+                atm_text = " ".join(conditions['atmosphere'])
                 st.markdown(
-                    f'<p style="font-size: 16px; line-height: 1.6; margin-bottom: 20px;"><b>Atmosphere:</b> {" ".join(conditions["atmosphere"])}</p>',
+                    f'<p style="font-size: 16px; line-height: 1.8; margin-bottom: 25px; color: #000000;"><strong>Atmosphere:</strong> {atm_text}</p>',
                     unsafe_allow_html=True
                 )
+            else:
+                st.write("No atmosphere data")
             
             # Time Required Section
             if conditions['time_required']:
+                time_text = " ".join(conditions['time_required'])
                 st.markdown(
-                    f'<p style="font-size: 16px; line-height: 1.6; margin-bottom: 20px;"><b>Time Required:</b> {" ".join(conditions["time_required"])}</p>',
+                    f'<p style="font-size: 16px; line-height: 1.8; margin-bottom: 25px; color: #000000;"><strong>Time Required:</strong> {time_text}</p>',
                     unsafe_allow_html=True
                 )
+            else:
+                st.write("No time data")
         
         with col2:
             # Section header with emoji
             st.markdown(
-                '<h2 style="font-size: 28px; font-weight: bold; color: white; margin-bottom: 20px;">🧪 Method & Type</h2>',
+                '<h2 style="font-size: 28px; font-weight: bold; color: #000000; margin-bottom: 20px;">🧪 Method & Type</h2>',
                 unsafe_allow_html=True
             )
             
             # Synthesis Method Section
             if conditions['synthesis_method']:
+                method_text = " ".join(conditions['synthesis_method'])
                 st.markdown(
-                    f'<p style="font-size: 16px; line-height: 1.6; margin-bottom: 20px;"><b>Synthesis Method:</b> {" ".join(conditions["synthesis_method"])}</p>',
+                    f'<p style="font-size: 16px; line-height: 1.8; margin-bottom: 25px; color: #000000;"><strong>Synthesis Method:</strong> {method_text}</p>',
                     unsafe_allow_html=True
                 )
+            else:
+                st.write("No synthesis method data")
             
             # Reaction Type Section
             if conditions['reaction_type']:
+                reaction_text = " ".join(conditions['reaction_type'])
                 st.markdown(
-                    f'<p style="font-size: 16px; line-height: 1.6; margin-bottom: 20px;"><b>Reaction Type:</b> {" ".join(conditions["reaction_type"])}</p>',
+                    f'<p style="font-size: 16px; line-height: 1.8; margin-bottom: 25px; color: #000000;"><strong>Reaction Type:</strong> {reaction_text}</p>',
                     unsafe_allow_html=True
                 )
+            else:
+                st.write("No reaction type data")
     
     # Structured Steps Tab
     with synthesis_tabs[1]:
