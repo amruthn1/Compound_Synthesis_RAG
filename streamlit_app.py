@@ -573,56 +573,56 @@ def display_explorer_page(pipeline):
                 generate_synthesis=False,
                 retrieve_top_k=0
             )
+            
+            if result.success and result.predicted_properties:
+                results.append({
+                    'Formula': base_material,
+                    'Variation': 'Original',
+                    'Formation Energy (eV/atom)': result.predicted_properties.get('formation_energy_eV_atom', float('nan')),
+                    'Band Gap (eV)': result.predicted_properties.get('band_gap_eV', float('nan')),
+                    'Density (g/cm³)': result.predicted_properties.get('density_g_cm3', float('nan')),
+                    'Status': '✓'
+                })
+        except Exception as e:
+            st.warning(f"Base material failed: {str(e)[:100]}")
+        
+        progress_bar.progress(1 / total_materials)
+        
+        # Process variations
+        for i, (sub_name, sub_dict) in enumerate(selected_subs.items(), 1):
+            status_text.text(f"[{i+1}/{total_materials}] Processing variation: {sub_name}")
+            
+            try:
+                result = pipeline.run_materials_pipeline(
+                    composition=base_material,
+                    substitutions=sub_dict,
+                    generate_cif=True,
+                    predict_properties=True,
+                    generate_synthesis=False,
+                    retrieve_top_k=0
+                )
                 
                 if result.success and result.predicted_properties:
                     results.append({
-                        'Formula': base_material,
-                        'Variation': 'Original',
+                        'Formula': result.final_formula,
+                        'Variation': sub_name,
                         'Formation Energy (eV/atom)': result.predicted_properties.get('formation_energy_eV_atom', float('nan')),
                         'Band Gap (eV)': result.predicted_properties.get('band_gap_eV', float('nan')),
                         'Density (g/cm³)': result.predicted_properties.get('density_g_cm3', float('nan')),
                         'Status': '✓'
                     })
-            except Exception as e:total_materials)
+            except Exception as e:
+                st.warning(f"{sub_name} failed: {str(e)[:100]}")
             
-            # Process variations
-            for i, (sub_name, sub_dict) in enumerate(selected_subs.items(), 1):
-                status_text.text(f"[{i+1}/{total_materials}] Processing variation
-            # Process variations
-            for i, (sub_name, sub_dict) in enumerate(selected_subs.items(), 1):
-                status_text.text(f"Processing variation {i}/{len(selected_subs)}: {sub_name}")
-                
-                try:
-                    result = pipeline.run_materials_pipeline(
-                        composition=base_material,
-                        substitutions=sub_dict,
-                        generate_cif=True,
-                        predict_properties=True,
-                        generate_synthesis=False,
-                        retrieve_top_k=0
-                    )
-                    
-                    if result.success and result.predicted_properties:
-                        results.append({
-                            'Formula': result.final_formula,
-                            'Variation': sub_name,
-                            'Formation Energy (eV/atom)': result.predicted_properties.get('formation_energy_eV_atom', float('nan')),
-                            'Band Gap (eV)': result.predicted_properties.get('band_gap_eV', float('nan')),
-                            'Density (g/cm³)': result.predicted_properties.get('density_g_cm3', float('nan')),
-                            'Status': '✓'
-                        })
-                except Exception as e:
-                    st.warning(f"{sub_name} failed: {str(e)[:100]}")
-                
-                progress_bar.progress((i + 1) / total_materials)
-            
-            # Completion
-            progress_bar.progress(1.0)
-            status_text.text("✓ All variations processed!")
-            import time
-            time.sleep(0.5)
-            status_text.empty()
-            progress_bar.empty()
+            progress_bar.progress((i + 1) / total_materials)
+        
+        # Completion
+        progress_bar.progress(1.0)
+        status_text.text("✓ All variations processed!")
+        import time
+        time.sleep(0.5)
+        status_text.empty()
+        progress_bar.empty()
         
         # Display results
         if len(results) > 0:
