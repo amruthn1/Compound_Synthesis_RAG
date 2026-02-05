@@ -9,11 +9,16 @@ import streamlit as st
 import sys
 import os
 from typing import Dict, Optional
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
 
 # Add parent directory to path
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from pipeline.run_pipeline import MaterialsPipeline, PipelineResult
+from rag.openrouter_agent import OpenRouterAgent
 import pandas as pd
 import csv
 
@@ -88,14 +93,33 @@ def load_pipeline():
     """Load the single shared pipeline. Cached to avoid reloading."""
     import torch
     
-    use_4bit = torch.cuda.is_available()
+    # Check if we should use OpenRouter or local model
+    use_openrouter = os.getenv("USE_OPENROUTER", "false").lower() == "true"
     
-    pipeline = MaterialsPipeline(
-        llama_model_name="Qwen/Qwen2.5-7B-Instruct",
-        qdrant_path="./qdrant_storage",
-        embedding_model="all-MiniLM-L6-v2",
-        use_4bit=use_4bit
-    )
+    if use_openrouter:
+        # Use OpenRouter API
+        st.info("Using OpenRouter API (Qwen2.5-7B-Instruct)")
+        openrouter_agent = OpenRouterAgent(
+            model="qwen/qwen-2.5-7b-instruct"
+        )
+        
+        pipeline = MaterialsPipeline(
+            llama_agent=openrouter_agent,
+            qdrant_path="./qdrant_storage",
+            embedding_model="all-MiniLM-L6-v2",
+            use_4bit=False
+        )
+    else:
+        # Use local model
+        st.info("Using local model (Qwen2.5-7B-Instruct)")
+        use_4bit = torch.cuda.is_available()
+        
+        pipeline = MaterialsPipeline(
+            llama_model_name="Qwen/Qwen2.5-7B-Instruct",
+            qdrant_path="./qdrant_storage",
+            embedding_model="all-MiniLM-L6-v2",
+            use_4bit=use_4bit
+        )
     
     return pipeline
 

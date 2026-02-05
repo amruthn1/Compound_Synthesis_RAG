@@ -68,6 +68,7 @@ class MaterialsPipeline:
     def __init__(
         self,
         llama_model_name: str = "Qwen/Qwen2.5-7B-Instruct",
+        llama_agent = None,  # Allow passing pre-initialized agent
         qdrant_path: str = "./qdrant_storage",
         embedding_model: str = "all-MiniLM-L6-v2",
         use_4bit: bool = True
@@ -76,10 +77,11 @@ class MaterialsPipeline:
         Initialize pipeline components.
         
         Args:
-            llama_model_name: Model identifier (Qwen2.5, Mistral, Phi-3 recommended)
+            llama_model_name: Model identifier (used if llama_agent not provided)
+            llama_agent: Pre-initialized LLM agent (e.g., OpenRouterAgent)
             qdrant_path: Path for Qdrant storage
             embedding_model: SentenceTransformer model name
-            use_4bit: Use 4-bit quantization (recommended for GPU)
+            use_4bit: Use 4-bit quantization (only if loading local model)
         """
         print("="*80)
         print("INITIALIZING MATERIALS DISCOVERY PIPELINE")
@@ -96,10 +98,16 @@ class MaterialsPipeline:
         self.retriever = MaterialsRetriever(self.embedder)
         
         print("[3/8] Loading Llama model (this may take a few minutes)...")
-        self.llama_agent = LlamaAgent(
-            model_name=llama_model_name,
-            load_in_4bit=use_4bit
-        )
+        if llama_agent is not None:
+            # Use pre-initialized agent (e.g., OpenRouter)
+            self.llama_agent = llama_agent
+            print("  Using provided LLM agent")
+        else:
+            # Load local model
+            self.llama_agent = LlamaAgent(
+                model_name=llama_model_name,
+                load_in_4bit=use_4bit
+            )
         
         print("[4/8] Initializing composition editor...")
         self.composition_editor = CompositionEditor()
