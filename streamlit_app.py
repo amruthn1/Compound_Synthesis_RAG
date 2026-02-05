@@ -48,6 +48,49 @@ def load_sample_materials():
     return samples
 
 
+def get_suggested_substitutions(composition):
+    """Get suggested element substitutions based on composition."""
+    from pymatgen.core import Composition
+    
+    try:
+        comp = Composition(composition)
+        elements = [str(el) for el in comp.elements]
+        
+        # Common substitution patterns
+        substitution_map = {
+            'Cu': ['Ni', 'Ag', 'Zn', 'Co'],
+            'Ni': ['Cu', 'Co', 'Fe', 'Zn'],
+            'Fe': ['Co', 'Ni', 'Mn'],
+            'Co': ['Ni', 'Fe', 'Cu'],
+            'K': ['Na', 'Rb', 'Cs'],
+            'Na': ['K', 'Li', 'Rb'],
+            'Li': ['Na', 'K'],
+            'Rb': ['K', 'Cs'],
+            'Cs': ['Rb', 'K'],
+            'Ca': ['Sr', 'Ba', 'Mg'],
+            'Sr': ['Ca', 'Ba'],
+            'Ba': ['Sr', 'Ca'],
+            'Mg': ['Ca', 'Zn'],
+            'Ti': ['Zr', 'Hf', 'V'],
+            'Zr': ['Ti', 'Hf'],
+            'Hf': ['Zr', 'Ti'],
+            'O': ['S', 'Se'],
+            'S': ['O', 'Se'],
+            'F': ['Cl', 'Br'],
+            'Cl': ['F', 'Br'],
+        }
+        
+        suggestions = []
+        for el in elements:
+            if el in substitution_map:
+                for target in substitution_map[el][:2]:  # Max 2 suggestions per element
+                    suggestions.append(f"{el}:{target}")
+        
+        return suggestions[:3]  # Return top 3 suggestions
+    except:
+        return []
+
+
 # Page configuration
 st.set_page_config(
     page_title="Materials Science RAG",
@@ -158,6 +201,12 @@ def display_header():
 def display_sidebar():
     """Display sidebar with options."""
     st.sidebar.header("⚙️ Configuration")
+    
+    # Dataset info
+    samples = load_sample_materials()
+    st.sidebar.metric("📊 Dataset Size", f"{len(samples)} materials", help="Materials available in reaction.csv")
+    
+    st.sidebar.markdown("---")
     
     # Pipeline options
     st.sidebar.subheader("Pipeline Options")
