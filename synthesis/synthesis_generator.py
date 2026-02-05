@@ -192,76 +192,117 @@ class SynthesisGenerator:
         
         lines.append("; ".join(temp_details))
         
-        # Pressure section - SPECIFIC to this material's precursors
+        # Pressure section - DYNAMIC based on element volatility
         lines.append("\n🔧 Pressure:")
         
-        # Check for volatile precursors
-        volatile_elements = {'Ag', 'Hg', 'Cd', 'Zn', 'As', 'Sb', 'P'}
-        has_volatile = any(elem in volatile_elements for elem in composition.keys())
+        pressure_details = []
         
-        pressure_details = ["Ambient pressure (1 atm) suitable for most solid-state reactions"]
+        # Check for volatile elements using dynamic function
+        volatile_elements = [e for e in composition.keys() if self._get_element_volatility(e) != 'stable']
+        volatility_map = {e: self._get_element_volatility(e) for e in volatile_elements}
         
-        if has_volatile:
-            volatile_list = [e for e in composition.keys() if e in volatile_elements]
-            pressure_details.append(f"⚠️ {', '.join(volatile_list)} may sublime - consider sealed tube or slight overpressure")
+        if not volatile_elements and 'F' not in composition and 'Cl' not in composition:
+            # Simple case - ambient is fine
+            pressure_details.append("Ambient pressure (1 atm) suitable - no volatile elements or moisture-sensitive compounds")
+        else:
+            # Need special considerations
+            very_volatile = [e for e, v in volatility_map.items() if v == 'very_volatile']
+            mod_volatile = [e for e, v in volatility_map.items() if v == 'moderately_volatile']
+            alkali_volatile = [e for e, v in volatility_map.items() if v == 'alkali_volatile']
+            
+            if very_volatile:
+                pressure_details.append(f"⚠️ SEALED TUBE REQUIRED: {', '.join(very_volatile)} sublime at ambient pressure")
+                pressure_details.append(f"Use evacuated quartz tube (10⁻³-10⁻⁴ torr) backfilled with inert gas to 0.5-1 atm")
+            elif mod_volatile or alkali_volatile:
+                all_vol = mod_volatile + alkali_volatile
+                pressure_details.append(f"Sealed crucible recommended: {', '.join(all_vol)} volatile at {temp}°C")
+                pressure_details.append(f"Alumina crucible with lid or quartz ampule prevents material loss")
+            else:
+                pressure_details.append("Ambient pressure (1 atm) with appropriate containment")
         
+        # Halogen handling
         if 'F' in composition or 'Cl' in composition:
-            pressure_details.append("Sealed crucible recommended for halides to prevent moisture ingress and volatile loss")
+            halogen = 'F' if 'F' in composition else 'Cl'
+            pressure_details.append(f"{halogen} compounds: Sealed system MANDATORY - prevents moisture ingress (H{halogen} formation) and volatile loss")
         
-        if 'O' in composition and len(composition) >= 4:
-            pressure_details.append("Open crucible allows O₂ exchange for stoichiometric oxide formation")
+        # Oxygen exchange for complex oxides
+        if 'O' in composition and len(composition) >= 4 and not volatile_elements:
+            pressure_details.append(f"Open crucible option: Allows O₂ exchange - beneficial for {len(composition)}-component oxide stoichiometry")
         
         lines.append("; ".join(pressure_details))
         
-        # Atmosphere section - MATERIAL-SPECIFIC recommendations
+        # Atmosphere section - FULLY DYNAMIC from element properties
         lines.append("\n🌬️ Atmosphere:")
         
-        atm_details = []
+        # Get calculated atmosphere requirements
+        atm_req = self._calculate_atmosphere_requirement(composition)
         
-        if 'F' in composition:
-            atm_details.append("Dry N₂ or Ar atmosphere REQUIRED (99.99%+ purity, <5 ppm H₂O)")
-            atm_details.append("⚠️ CRITICAL: Moisture causes HF formation - use desiccant drying column")
-            atm_details.append(f"Flow rate: 100-200 mL/min maintains inert environment for {formula}")
-        elif 'O' in composition and ('Ti' in composition or 'Fe' in composition or 'Mn' in composition or 'Co' in composition):
-            atm_details.append(f"Air or O₂-enriched atmosphere for {material_class} with transition metals")
-            atm_details.append(f"O₂ ensures proper oxidation states: {', '.join([e for e in composition.keys() if e in ['Ti','Fe','Mn','Co']])} require oxygen-rich environment")
-        elif 'N' in composition:
-            atm_details.append("NH₃ or N₂ atmosphere (flowing) for nitride formation")
-            atm_details.append("⚠️ NH₃ toxic - use gas scrubber and proper ventilation")
-        elif 'O' in composition:
-            atm_details.append(f"Air atmosphere sufficient for simple oxide {formula}")
-            atm_details.append("Static air allows natural O₂ diffusion for stoichiometric composition")
-        else:
-            atm_details.append("Inert atmosphere (Ar or N₂, 99.9%+) prevents unwanted oxidation")
-            atm_details.append(f"Protects reactive elements {', '.join(list(composition.keys())[:3])} during high-temp processing")
+        atm_details = []
+        atm_details.append(f"Required: {atm_req['type']}")
+        atm_details.append(f"Purity: {atm_req['purity']}")
+        atm_details.append(f"Flow rate: {atm_req['flow_rate']}")
+        atm_details.append(f"Rationale: {atm_req['reason']}")
+        
+        # Add specific safety warnings for hazardous atmospheres
+        if 'NH₃' in atm_req['type']:
+            atm_details.append("⚠️ SAFETY: NH₃ highly toxic (TLV 25 ppm) - use gas scrubber, ventilation, and detector")
+        elif 'F' in composition:
+            atm_details.append("⚠️ CRITICAL: Even trace moisture (<5 ppm) causes HF - use molecular sieve drying train")
+        
+        # Suggest monitoring
+        if 'O₂' in atm_req['type'] or 'Air' in atm_req['type']:
+            atm_details.append(f"Monitor: O₂ partial pressure affects oxidation states - adjust if phase impurities appear")
+        elif 'Inert' in atm_req['type'] or 'Ar' in atm_req['type'] or 'N₂' in atm_req['type']:
+            atm_details.append(f"Monitor: O₂ contamination <10 ppm ensures inert conditions - use O₂ sensor")
         
         lines.append("; ".join(atm_details))
         
-        # Time section with SPECIFIC breakdown for this material
+        # Time section with DYNAMIC calculations from diffusion kinetics
         lines.append("\n⏱️ Time Required:")
         
-        heating_time_min = int((temp - 25) / 10 / 60) + 3
-        heating_time_max = int((temp - 25) / 5 / 60) + 5
+        # Calculate heating time from temperature and rate
+        heating_time_min = int((temp - 25) / 5 / 60)  # At 5°C/min
+        heating_time_max = int((temp - 25) / 3 / 60)  # At 3°C/min
+        heating_time_min = max(2, heating_time_min)
+        heating_time_max = max(heating_time_min + 1, heating_time_max)
+        
+        # Calculate reaction time from diffusion kinetics
+        reaction_min, reaction_max = self._estimate_diffusion_time(composition, temp)
+        
+        # Cooling time (roughly half of heating)
+        cooling_time_min = max(3, heating_time_min // 2)
+        cooling_time_max = max(cooling_time_min + 2, heating_time_max // 2)
         
         time_details = []
         time_details.append(f"Heating: {heating_time_min}-{heating_time_max}h to {temp}°C at 3-5°C/min")
         
-        # Material-specific reaction time with reasoning
-        if 'F' in composition and len(composition) > 3:
-            time_details.append(f"Reaction: 24-48h for complex {len(composition)}-component fluoride - slow diffusion in fluoride lattice requires extended time")
-        elif 'O' in composition and len(composition) > 3:
-            time_details.append(f"Reaction: 18-36h for {len(composition)}-component oxide - multiple cation ordering requires longer hold")
-        elif len(composition) > 2:
-            time_details.append(f"Reaction: 12-24h for {material_class} - allows complete interdiffusion of {len(composition)} elements")
+        # Explain reaction time calculation
+        n_elements = len(composition)
+        if 'F' in composition:
+            time_details.append(f"Reaction: {reaction_min}-{reaction_max}h (calculated for {n_elements}-component fluoride at {temp}°C)")
+            time_details.append(f"Rationale: F⁻ slow diffusion in fluoride lattice - time scales with T⁻¹ and system complexity")
+        elif 'N' in composition:
+            time_details.append(f"Reaction: {reaction_min}-{reaction_max}h (calculated for nitride diffusion at {temp}°C)")
+            time_details.append(f"Rationale: N diffusion moderate - time adjusted for {n_elements} elements and temperature")
+        elif 'O' in composition:
+            time_details.append(f"Reaction: {reaction_min}-{reaction_max}h (calculated for {n_elements}-cation oxide at {temp}°C)")
+            time_details.append(f"Rationale: O²⁻ mobile - time dominated by cation interdiffusion in solid state")
         else:
-            time_details.append(f"Reaction: 8-12h for binary {material_class} - simpler system forms faster")
+            time_details.append(f"Reaction: {reaction_min}-{reaction_max}h (calculated from elemental diffusion at {temp}°C)")
+            time_details.append(f"Rationale: Metallic/covalent diffusion relatively fast - time for {n_elements} elements")
         
-        time_details.append("Cooling: 6-12h controlled rate (2-5°C/min) maintains phase purity")
-        time_details.append("Regrind & re-fire: 2-3 cycles often needed for homogeneity")
+        time_details.append(f"Cooling: {cooling_time_min}-{cooling_time_max}h at 2-5°C/min (maintains phase purity)")
         
-        total_min = heating_time_min + 8 + 6
-        total_max = heating_time_max + 48 + 12
-        time_details.append(f"Total: {total_min}-{total_max}h per cycle")
+        # Regrind cycles
+        if n_elements > 3:
+            time_details.append(f"Regrind & re-fire: 2-3 cycles REQUIRED for {n_elements} components - ensures homogeneity")
+        else:
+            time_details.append(f"Regrind & re-fire: 1-2 cycles recommended - improves phase purity")
+        
+        # Total time
+        total_min = heating_time_min + reaction_min + cooling_time_min
+        total_max = heating_time_max + reaction_max + cooling_time_max
+        time_details.append(f"Total per cycle: {total_min}-{total_max}h (excluding regrinding time ~1-2h)")
         
         lines.append("; ".join(time_details))
         
@@ -270,20 +311,33 @@ class SynthesisGenerator:
         # Method & Type section - SPECIFIC to this material
         lines.append("\n🧪 Synthesis Method:")
         
-        # Tailor method description to material type
-        method_details = ["Solid-state reaction via intimate precursor mixing"]
+        method_details = ["Solid-state reaction via thorough precursor mixing and thermal processing"]
         
-        if 'F' in composition:
-            method_details.append("grind in inert atmosphere (glove box) to prevent moisture")
-            method_details.append("press pellet under ~5 tons/cm² for good contact")
-        else:
-            method_details.append("grind with mortar/pestle or ball mill until homogeneous")
-            method_details.append("pelletize at 2-5 tons/cm² to maximize surface contact")
+        # Determine grinding requirements based on composition
+        moisture_sensitive = 'F' in composition or 'Cl' in composition or 'Li' in composition
+        requires_inert = moisture_sensitive or any(self._get_element_volatility(e) != 'stable' for e in composition.keys())
         
-        if len(composition) > 3:
-            method_details.append(f"regrind after each firing cycle - {len(composition)} components need multiple cycles for complete reaction")
+        if moisture_sensitive:
+            method_details.append(f"Grind in inert atmosphere glove box (N₂/Ar, <0.1 ppm H₂O) - {formula} extremely hygroscopic")
+            method_details.append(f"Grinding time: 20-30 min with agate mortar ensures intimate mixing of {len(precursors)} precursors")
         else:
-            method_details.append("regrind after 1st firing to break agglomerates and improve homogeneity")
+            method_details.append(f"Grind with agate mortar/pestle or planetary ball mill - target <10 µm particle size")
+            method_details.append(f"Grinding time: 15-20 min manual or 2-4h ball milling for {len(precursors)} precursors")
+        
+        # Pelletizing pressure
+        if 'F' in composition or any(self._get_element_volatility(e) == 'very_volatile' for e in composition.keys()):
+            method_details.append(f"Pelletize at 4-6 tons/cm² (40-60 MPa) - higher density reduces sublimation")
+        else:
+            method_details.append(f"Pelletize at 2-4 tons/cm² (20-40 MPa) - sufficient for oxide/normal systems")
+        
+        # Regrind cycles based on complexity
+        n_elements = len(composition)
+        if n_elements > 4:
+            method_details.append(f"Regrind cycles: 3-4 required for {n_elements} components - long-range diffusion limited")
+        elif n_elements > 2:
+            method_details.append(f"Regrind cycles: 2-3 recommended for {n_elements} components - ensures homogeneity")
+        else:
+            method_details.append(f"Regrind cycles: 1-2 sufficient for binary system - faster equilibration")
         
         lines.append("; ".join(method_details))
         
@@ -1029,12 +1083,196 @@ Include specific numbers, ranges, and step-by-step instructions wherever possibl
         
         return "\n".join(lines)
     
+    def _get_precursor_decomp_temp(self, precursor: str) -> int:
+        """Get estimated decomposition/reaction temperature for precursor."""
+        # Decomposition temperatures (°C) for common precursors
+        decomp_temps = {
+            'CO3': 850,  # Carbonates generally decompose 700-1000°C
+            'OH': 400,   # Hydroxides decompose 300-500°C
+            'NO3': 600,  # Nitrates decompose 400-800°C
+            'H2PO4': 250, # Ammonium phosphates decompose 200-300°C
+            'TiO2': 1200, # Rutile stable to very high temps
+            'ZrO2': 1300, # Very refractory
+            'Al2O3': 1400, # Highly refractory
+            'La2O3': 1200,
+            'Y2O3': 1200,
+        }
+        
+        # Check which decomposition group this precursor belongs to
+        for key, temp in decomp_temps.items():
+            if key in precursor:
+                return temp
+        
+        # Default oxide reaction temperature
+        return 1000
+    
+    def _calculate_required_temp(self, composition: Dict[str, float], precursors: List[str]) -> Tuple[int, int, int]:
+        """Calculate required temperature from precursor properties and composition.
+        
+        Returns: (base_temp, lower_bound, upper_bound)
+        """
+        # Get decomposition temperatures for all precursors
+        decomp_temps = [self._get_precursor_decomp_temp(p) for p in precursors]
+        
+        # Base temperature should be 100-200°C above highest decomposition temp
+        max_decomp = max(decomp_temps) if decomp_temps else 1000
+        base_temp = max_decomp + 150
+        
+        # Adjust based on composition complexity
+        n_elements = len(composition)
+        if n_elements > 3:
+            # Complex systems need higher temps for interdiffusion
+            base_temp += 50 * (n_elements - 3)
+        
+        # Adjust for specific elements
+        # Refractory elements
+        refractory = {'Zr', 'Hf', 'Nb', 'Ta', 'W', 'Mo', 'Al'}
+        if set(composition.keys()) & refractory:
+            base_temp += 100
+        
+        # Volatile elements - lower temperature
+        volatile = {'Li', 'Na', 'K', 'Ag', 'Hg', 'Cd', 'Zn'}
+        if set(composition.keys()) & volatile:
+            base_temp = min(base_temp, 900)
+        
+        # Calculate practical bounds
+        lower_bound = max(600, base_temp - 100)
+        upper_bound = min(1500, base_temp + 150)
+        
+        # Clamp base temp to reasonable range
+        base_temp = max(700, min(base_temp, 1400))
+        
+        return base_temp, lower_bound, upper_bound
+    
+    def _get_element_volatility(self, element: str) -> str:
+        """Get volatility classification for element."""
+        very_volatile = {'Hg', 'Cd', 'As', 'P', 'S', 'Se', 'Te'}
+        moderately_volatile = {'Zn', 'Ag', 'Sb', 'Pb', 'Bi'}
+        alkali_volatile = {'Li', 'Na', 'K', 'Rb', 'Cs'}
+        
+        if element in very_volatile:
+            return 'very_volatile'
+        elif element in moderately_volatile:
+            return 'moderately_volatile'
+        elif element in alkali_volatile:
+            return 'alkali_volatile'
+        else:
+            return 'stable'
+    
+    def _estimate_diffusion_time(self, composition: Dict[str, float], temp: int) -> Tuple[int, int]:
+        """Estimate reaction time based on diffusion kinetics.
+        
+        Returns: (min_hours, max_hours)
+        """
+        # Base time depends on number of elements (complexity)
+        n_elements = len(composition)
+        
+        # Activation energy considerations
+        # Higher temps -> faster diffusion (exponential with T)
+        temp_factor = 1400 / max(temp, 700)  # Ratio to reference temp
+        
+        # Fluorides and some compounds have slow diffusion
+        diffusion_modifier = 1.0
+        if 'F' in composition:
+            diffusion_modifier = 2.0  # Fluorides diffuse slowly
+        elif 'N' in composition:
+            diffusion_modifier = 1.5  # Nitrides moderate
+        elif 'O' in composition:
+            diffusion_modifier = 1.0  # Oxides normal
+        else:
+            diffusion_modifier = 0.8  # Intermetallics faster
+        
+        # Calculate base times
+        if n_elements == 2:
+            min_time = int(6 * temp_factor * diffusion_modifier)
+            max_time = int(12 * temp_factor * diffusion_modifier)
+        elif n_elements == 3:
+            min_time = int(10 * temp_factor * diffusion_modifier)
+            max_time = int(20 * temp_factor * diffusion_modifier)
+        elif n_elements == 4:
+            min_time = int(16 * temp_factor * diffusion_modifier)
+            max_time = int(32 * temp_factor * diffusion_modifier)
+        else:
+            # Complex systems
+            min_time = int(20 * temp_factor * diffusion_modifier)
+            max_time = int(48 * temp_factor * diffusion_modifier)
+        
+        # Ensure reasonable bounds
+        min_time = max(4, min_time)
+        max_time = max(min_time + 4, min(max_time, 72))
+        
+        return min_time, max_time
+    
+    def _calculate_atmosphere_requirement(self, composition: Dict[str, float]) -> Dict[str, str]:
+        """Determine required atmosphere based on element properties.
+        
+        Returns dict with 'type', 'purity', 'flow_rate', 'reason'
+        """
+        result = {}
+        
+        # Halogens require inert atmosphere
+        halogens = {'F', 'Cl', 'Br', 'I'}
+        if set(composition.keys()) & halogens:
+            halogen = list(set(composition.keys()) & halogens)[0]
+            result['type'] = 'Dry N₂ or Ar'
+            result['purity'] = '99.99%+ (<5 ppm H₂O, <2 ppm O₂)'
+            result['flow_rate'] = '100-200 mL/min'
+            result['reason'] = f'{halogen} compounds extremely moisture-sensitive - HF/HCl formation with water'
+            return result
+        
+        # Transition metals that need oxygen
+        oxidizing_tms = {'Ti', 'V', 'Cr', 'Mn', 'Fe', 'Co', 'Ni', 'Cu'}
+        if 'O' in composition and set(composition.keys()) & oxidizing_tms:
+            tms = list(set(composition.keys()) & oxidizing_tms)
+            result['type'] = 'Air or O₂-enriched (21-50% O₂)'
+            result['purity'] = 'Standard air or compressed O₂'
+            result['flow_rate'] = '50-100 mL/min (if flowing)'
+            result['reason'] = f'Ensures correct oxidation states for {", ".join(tms)} - prevents reduction'
+            return result
+        
+        # Nitrides need nitrogen/ammonia
+        if 'N' in composition:
+            result['type'] = 'NH₃ or N₂ (flowing)'
+            result['purity'] = '99.9%+ NH₃ or 99.99%+ N₂'
+            result['flow_rate'] = '100-300 mL/min'
+            result['reason'] = 'Maintains nitrogen chemical potential - prevents decomposition'
+            return result
+        
+        # Simple oxides
+        if 'O' in composition and len(composition) <= 3:
+            result['type'] = 'Air (static)'
+            result['purity'] = 'Ambient air sufficient'
+            result['flow_rate'] = 'Static atmosphere'
+            result['reason'] = 'Natural O₂ diffusion maintains stoichiometry'
+            return result
+        
+        # Intermetallics or other compounds
+        # Check if any reactive elements present
+        reactive = {'Li', 'Na', 'K', 'Mg', 'Ca', 'Sr', 'Ba', 'Al', 'Ti', 'Zr', 'Hf', 'Nb', 'Ta'}
+        if set(composition.keys()) & reactive:
+            react_list = list(set(composition.keys()) & reactive)
+            result['type'] = 'Inert (Ar or N₂)'
+            result['purity'] = '99.9%+ (for less reactive) or 99.999%+ (for highly reactive)'
+            result['flow_rate'] = '50-150 mL/min'
+            result['reason'] = f'Protects {", ".join(react_list[:3])} from oxidation during high-temp processing'
+            return result
+        
+        # Default
+        result['type'] = 'Air or inert atmosphere'
+        result['purity'] = 'Standard air or 99.9%+ inert'
+        result['flow_rate'] = 'Static or 50-100 mL/min'
+        result['reason'] = 'Standard atmosphere suitable for stable compounds'
+        return result
+    
     def _estimate_synthesis_temperature(
         self,
         composition: Dict[str, float]
     ) -> int:
-        """Estimate synthesis temperature based on composition."""
-        # Simple heuristics
+        """Estimate synthesis temperature based on composition.
+        
+        DEPRECATED: Use _calculate_required_temp instead.
+        """
+        # Simple heuristics for backward compatibility
         base_temp = 1000
         
         # Heavy elements increase temperature
