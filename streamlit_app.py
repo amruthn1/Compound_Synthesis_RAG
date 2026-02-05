@@ -132,7 +132,7 @@ st.markdown("""
 
 
 @st.cache_resource
-def load_pipeline():
+def load_pipeline(_cache_version="v2"):  # Add version parameter to bust cache
     """Load the single shared pipeline. Cached to avoid reloading."""
     import torch
     
@@ -272,14 +272,22 @@ def display_sidebar():
         if 'pipeline' in st.session_state:
             pipeline = st.session_state['pipeline']
             try:
-                count = pipeline.save_papers_to_cache()
-                if count > 0:
-                    st.sidebar.success(f"✓ Saved {count} papers to cache")
-                    st.sidebar.info("Commit scraped_papers_cache.json to Git!")
+                # Check if method exists (for backwards compatibility)
+                if hasattr(pipeline, 'save_papers_to_cache'):
+                    count = pipeline.save_papers_to_cache()
+                    if count and count > 0:
+                        st.sidebar.success(f"✓ Saved {count} papers to cache")
+                        st.sidebar.info("Commit scraped_papers_cache.json to Git!")
+                    else:
+                        st.sidebar.warning("No papers to save")
                 else:
-                    st.sidebar.warning("No papers to save")
+                    st.sidebar.error("Please refresh the page to update the pipeline")
+                    if st.sidebar.button("🔄 Clear Cache & Refresh"):
+                        st.cache_resource.clear()
+                        st.rerun()
             except Exception as e:
                 st.sidebar.error(f"Save failed: {str(e)[:50]}")
+                st.sidebar.info("Try: Clear cache and refresh")
     
     st.sidebar.markdown("---")
     
