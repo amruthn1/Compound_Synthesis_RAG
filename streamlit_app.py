@@ -102,39 +102,44 @@ def load_pipeline():
     except:
         use_openrouter = os.getenv("USE_OPENROUTER", "false").lower() == "true"
     
-    if use_openrouter:
-        # Use OpenRouter API
-        st.info("Using OpenRouter API (Qwen2.5-7B-Instruct)")
-        
-        # Get API key from secrets or env
-        try:
-            api_key = st.secrets.get("OPENROUTER_API_KEY")
-        except:
-            api_key = os.getenv("OPENROUTER_API_KEY")
-        
-        openrouter_agent = OpenRouterAgent(
-            api_key=api_key,
-            model="qwen/qwen-2.5-7b-instruct"
-        )
-        
-        pipeline = MaterialsPipeline(
-            llama_agent=openrouter_agent,
-            qdrant_path="./qdrant_storage",
-            embedding_model="all-MiniLM-L6-v2",
-            use_4bit=False
-        )
-    else:
-        # Use local model
-        st.info("Using local model (Qwen2.5-7B-Instruct)")
-        use_4bit = torch.cuda.is_available()
-        
-        pipeline = MaterialsPipeline(
-            llama_model_name="Qwen/Qwen2.5-7B-Instruct",
-            qdrant_path="./qdrant_storage",
-            embedding_model="all-MiniLM-L6-v2",
-            use_4bit=use_4bit
-        )
+    # Show loading status
+    with st.spinner("Initializing pipeline... This may take a minute on first run."):
+        if use_openrouter:
+            # Use OpenRouter API
+            st.info("Using OpenRouter API (Qwen2.5-7B-Instruct)")
+            
+            # Get API key from secrets or env
+            try:
+                api_key = st.secrets.get("OPENROUTER_API_KEY")
+            except:
+                api_key = os.getenv("OPENROUTER_API_KEY")
+            
+            openrouter_agent = OpenRouterAgent(
+                api_key=api_key,
+                model="qwen/qwen-2.5-7b-instruct"
+            )
+            
+            # Use in-memory Qdrant for Streamlit Cloud (faster, no disk issues)
+            pipeline = MaterialsPipeline(
+                llama_agent=openrouter_agent,
+                qdrant_path=":memory:",  # In-memory mode for cloud
+                embedding_model="all-MiniLM-L6-v2",
+                use_4bit=False
+            )
+        else:
+            # Use local model (NOT recommended for Streamlit Cloud - 8GB download)
+            st.info("Using local model (Qwen2.5-7B-Instruct)")
+            st.warning("⚠️ Local model requires 8GB+ download. Use OpenRouter for cloud deployment.")
+            use_4bit = torch.cuda.is_available()
+            
+            pipeline = MaterialsPipeline(
+                llama_model_name="Qwen/Qwen2.5-7B-Instruct",
+                qdrant_path=":memory:",  # In-memory for cloud compatibility
+                embedding_model="all-MiniLM-L6-v2",
+                use_4bit=use_4bit
+            )
     
+    st.success("Pipeline loaded successfully!")
     return pipeline
 
 
