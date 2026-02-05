@@ -93,51 +93,58 @@ class MaterialsPipeline:
             model_name=embedding_model,
             qdrant_path=qdrant_path
         )
+        print("  ✓ Embedding model ready")
         
-        print("[2/8] Initializing retriever...")
+        print("\n[2/8] Initializing retriever...")
         self.retriever = MaterialsRetriever(self.embedder)
+        print("  ✓ Retriever ready")
         
-        print("[3/8] Loading Llama model (this may take a few minutes)...")
+        print("\n[3/8] Loading Llama model (this may take a few minutes)...")
         if llama_agent is not None:
             # Use pre-initialized agent (e.g., OpenRouter)
             self.llama_agent = llama_agent
-            print("  Using provided LLM agent")
+            print("  ✓ Using provided LLM agent (OpenRouter)")
         else:
             # Load local model
             self.llama_agent = LlamaAgent(
                 model_name=llama_model_name,
                 load_in_4bit=use_4bit
             )
+            print("  ✓ Local LLM loaded")
         
-        print("[4/8] Initializing composition editor...")
+        print("\n[4/8] Initializing composition editor...")
         self.composition_editor = CompositionEditor()
+        print("  ✓ Composition editor ready")
         
-        print("[5/8] Initializing CIF generator...")
+        print("\n[5/8] Initializing CIF generator...")
         self.cif_generator = CIFGenerator()
+        print("  ✓ CIF generator ready")
         
-        print("[6/8] Initializing property predictors...")
+        print("\n[6/8] Initializing property predictors...")
         self.alignff_predictor = AlignFFPredictor()
+        print("  ✓ AlignFF predictor ready")
         try:
             self.matgl_predictor = MatGLPredictor()
+            print("  ✓ MatGL predictor ready")
         except:
-            print("  MatGL not available - will use AlignFF fallback only")
+            print("  ⚠ MatGL not available - will use AlignFF fallback only")
             self.matgl_predictor = None
         
-        print("[7/8] Initializing hazard detector...")
+        print("\n[7/8] Initializing hazard detector...")
         self.hazard_detector = HazardDetector()
+        print("  ✓ Hazard detector ready")
         
-        print("[8/8] Initializing synthesis generator...")
+        print("\n[8/8] Initializing synthesis generator...")
         self.synthesis_generator = SynthesisGenerator(
             self.llama_agent,
             self.hazard_detector
         )
-        
-        # Load sample reactions into vector database
-        print("[9/9] Populating vector database with sample reactions...")
-        self._load_sample_reactions_to_db()
+        print("  ✓ Synthesis generator ready")
         
         print("\n" + "="*80)
         print("PIPELINE READY")
+        print("="*80)
+        print("\nℹ️  Vector database is empty. Use 'Scrape Papers' in sidebar to populate.")
         print("="*80 + "\n")
     
     def populate_database_from_reactions(self, force_reload: bool = False):

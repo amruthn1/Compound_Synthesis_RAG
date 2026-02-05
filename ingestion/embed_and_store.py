@@ -31,9 +31,11 @@ class PaperEmbedder:
         self.embedding_dim = self.model.get_sentence_embedding_dimension()
         
         # Initialize Qdrant client
-        if qdrant_path:
+        if qdrant_path and qdrant_path != ":memory:":
+            # Use persistent storage on disk
             self.client = QdrantClient(path=qdrant_path)
         else:
+            # Use in-memory storage (for cloud deployments)
             self.client = QdrantClient(":memory:")
         
         self.collection_name = collection_name
@@ -43,20 +45,26 @@ class PaperEmbedder:
     
     def _create_collection(self):
         """Create Qdrant collection."""
-        collections = self.client.get_collections().collections
-        collection_names = [c.name for c in collections]
-        
-        if self.collection_name not in collection_names:
-            self.client.create_collection(
-                collection_name=self.collection_name,
-                vectors_config=VectorParams(
-                    size=self.embedding_dim,
-                    distance=Distance.COSINE
+        try:
+            collections = self.client.get_collections().collections
+            collection_names = [c.name for c in collections]
+            
+            if self.collection_name not in collection_names:
+                print(f"  Creating new Qdrant collection: {self.collection_name}")
+                self.client.create_collection(
+                    collection_name=self.collection_name,
+                    vectors_config=VectorParams(
+                        size=self.embedding_dim,
+                        distance=Distance.COSINE
+                    )
                 )
-            )
-            print(f"Created collection: {self.collection_name}")
-        else:
-            print(f"Collection already exists: {self.collection_name}")
+                print(f"  ✓ Collection created")
+            else:
+                print(f"  ✓ Collection already exists: {self.collection_name}")
+        except Exception as e:
+            print(f"  Warning: Could not initialize collection: {e}")
+            # Continue anyway - will create on first add
+
     
     def embed_text(self, text: str) -> List[float]:
         """
