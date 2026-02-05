@@ -94,12 +94,26 @@ def load_pipeline():
     import torch
     
     # Check if we should use OpenRouter or local model
-    use_openrouter = os.getenv("USE_OPENROUTER", "false").lower() == "true"
+    # Try Streamlit secrets first, then fall back to environment variables
+    try:
+        use_openrouter = st.secrets.get("USE_OPENROUTER", False)
+        if isinstance(use_openrouter, str):
+            use_openrouter = use_openrouter.lower() == "true"
+    except:
+        use_openrouter = os.getenv("USE_OPENROUTER", "false").lower() == "true"
     
     if use_openrouter:
         # Use OpenRouter API
         st.info("Using OpenRouter API (Qwen2.5-7B-Instruct)")
+        
+        # Get API key from secrets or env
+        try:
+            api_key = st.secrets.get("OPENROUTER_API_KEY")
+        except:
+            api_key = os.getenv("OPENROUTER_API_KEY")
+        
         openrouter_agent = OpenRouterAgent(
+            api_key=api_key,
             model="qwen/qwen-2.5-7b-instruct"
         )
         
