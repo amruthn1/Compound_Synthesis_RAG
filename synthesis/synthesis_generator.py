@@ -81,6 +81,11 @@ class SynthesisGenerator:
         )
         sections.append(reaction_conditions_section)
         
+        # Debug: Verify section was generated
+        print(f"  ✓ Reaction conditions section generated ({len(reaction_conditions_section)} chars)")
+        if "🔥 REACTION CONDITIONS" not in reaction_conditions_section:
+            print(f"  ⚠ WARNING: Section missing expected header!")
+        
         # Section 1: SAFETY (ABSOLUTELY MANDATORY)
         safety_section = self._generate_safety_section(
             formula,
