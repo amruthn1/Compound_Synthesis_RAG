@@ -584,17 +584,22 @@ def evaluate_precursor_feasibility(precursor_combo: Dict[str, str], formula: str
         'Cl': 1.8,   # Chlorides (moderate-expensive)
     }
     
-    total_cost = 0
-    for precursor in precursor_combo.values():
-        # Estimate cost based on anion
-        cost = 1.5  # default
-        for anion, anion_cost in cost_map.items():
-            if anion in precursor:
-                cost = anion_cost
-                break
-        total_cost += cost
-    
-    avg_cost = total_cost / len(precursor_combo)
+    # Handle empty precursor_combo (when evaluating formula only)
+    if precursor_combo and len(precursor_combo) > 0:
+        total_cost = 0
+        for precursor in precursor_combo.values():
+            # Estimate cost based on anion
+            cost = 1.5  # default
+            for anion, anion_cost in cost_map.items():
+                if anion in precursor:
+                    cost = anion_cost
+                    break
+            total_cost += cost
+        
+        avg_cost = total_cost / len(precursor_combo)
+    else:
+        # Default average cost if no precursors specified
+        avg_cost = 1.3
     
     # Feasibility score (lower formation energy + lower cost = better)
     # Normalize formation energy (typically -5 to 0 eV/atom)
