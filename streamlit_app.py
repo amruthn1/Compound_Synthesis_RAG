@@ -462,6 +462,62 @@ def display_cif_section(result: PipelineResult):
     )
 
 
+def generate_element_substitutions(formula: str, max_substitutions: int = 10):
+    """Generate chemically reasonable element substitutions."""
+    from pymatgen.core import Composition
+    import random
+    
+    substitution_map = {
+        'Cu': ['Ni', 'Co', 'Zn', 'Fe'],
+        'Ni': ['Cu', 'Co', 'Fe', 'Zn'],
+        'Fe': ['Co', 'Ni', 'Mn', 'Cr'],
+        'Co': ['Ni', 'Fe', 'Cu', 'Mn'],
+        'K': ['Na', 'Rb', 'Cs', 'Li'],
+        'Na': ['K', 'Li', 'Rb'],
+        'Li': ['Na', 'K'],
+        'Rb': ['K', 'Cs', 'Na'],
+        'Cs': ['Rb', 'K'],
+        'Ca': ['Sr', 'Ba', 'Mg'],
+        'Sr': ['Ca', 'Ba'],
+        'Ba': ['Sr', 'Ca'],
+        'Mg': ['Ca', 'Zn', 'Ni'],
+        'Ti': ['Zr', 'Hf', 'V'],
+        'Zr': ['Ti', 'Hf'],
+        'O': ['S', 'Se'],
+        'F': ['Cl', 'Br', 'I'],
+        'Cl': ['Br', 'F', 'I'],
+    }
+    
+    comp = Composition(formula)
+    elements = [str(el) for el in comp.elements]
+    
+    # Generate substitutions
+    substituted_formulas = []
+    
+    for elem in elements:
+        if elem in substitution_map:
+            for substitute in substitution_map[elem][:3]:  # Max 3 per element
+                # Create new formula with substitution
+                new_formula = formula.replace(elem, substitute)
+                try:
+                    # Validate it's a valid composition
+                    Composition(new_formula)
+                    substituted_formulas.append({
+                        'formula': new_formula,
+                        'substitution': f"{elem} → {substitute}",
+                        'original_element': elem,
+                        'new_element': substitute
+                    })
+                except:
+                    pass
+    
+    # Limit to max_substitutions
+    if len(substituted_formulas) > max_substitutions:
+        substituted_formulas = random.sample(substituted_formulas, max_substitutions)
+    
+    return substituted_formulas
+
+
 def generate_precursor_combinations(formula: str, max_combinations: int = 20):
     """Generate all feasible precursor combinations for a given formula."""
     from ingestion.parse_reactions import parse_chemical_formula
@@ -565,10 +621,140 @@ def display_precursor_combinations_section(result: PipelineResult):
     """Display feasible precursor combinations validated by ALIGNN."""
     st.subheader("🔄 Alternative Precursor Combinations")
     
-    st.info("""
-    This section shows different precursor combinations that could be used to synthesize 
-    the target material, with feasibility assessed based on formation energy predictions.
-    """)
+    # Add tabs for different types of alternatives
+    alt_tabs = st.tabs(["🔧 Precursor Swaps", "⚗️ Element Substitutions"])
+    
+    # Tab 1: Precursor alternatives for same formula
+    with alt_tabs[0]:
+        st.info("""
+        Different precursor combinations that could be used to synthesize 
+        the **same** target material, with feasibility assessed based on formation energy predictions.
+        """)
+        display_precursor_swaps(result)
+    
+    # Tab 2: Element substitutions (different formulas)
+    with alt_tabs[1]:
+        st.info("""
+        Alternative materials with **element substitutions** (e.g., K→Na, Cu→Ni). 
+        These create different compounds with potentially similar properties.
+        """)
+        display_element_substitutions(result)
+
+
+def display_element_substitutions(result: PipelineResult):
+    """Display alternative formulas with element substitutions."""
+    st.markdown("### 🧪 Element Substitution Alternatives")
+    
+    with st.spinner("Generating element substitutions..."):
+        try:
+            substitutions = generate_element_substitutions(result.final_formula)
+            
+            if not substitutions:
+                st.warning("No common element substitutions found for this composition.")
+                return
+            
+            st.markdown(f"**Original Formula:** `{result.final_formula}`")
+            st.markdown("---")
+            
+            # Evaluate each substitution
+            sub_results = []
+            progress_bar = st.progress(0)
+            
+            for idx, sub in enumerate(substitutions):
+                new_formula = sub['formula']
+                substitution = sub['substitution']
+                
+                # Evaluate feasibility
+                from ingestion.parse_reactions import parse_chemical_formula
+                comp_dict = parse_chemical_formula(new_formula)
+                evaluation = evaluate_precursor_feasibility({}, new_formula)
+                
+                # Get precursors for new formula
+                from ingestion.precursor_extraction import infer_precursors
+                precursors = infer_precursors(comp_dict)
+                
+                sub_results.append({
+                    'Formula': new_formula,
+                    'Substitution': substitution,
+                    'Original Element': sub['original_element'],
+                    'New Element': sub['new_element'],
+                    'Precursors': precursors,
+                    'Formation Energy (eV/atom)': f"{evaluation['formation_energy']:.3f}",
+                    'Stability': evaluation['stability_rating'],
+                    'Feasible': '✅' if evaluation['is_feasible'] else '⚠️',
+                    '_raw_energy': evaluation['formation_energy'],
+                    '_raw_score': evaluation['feasibility_score']
+                })
+                progress_bar.progress((idx + 1) / len(substitutions))
+            
+            progress_bar.empty()
+            
+            # Sort by feasibility
+            sub_results.sort(key=lambda x: x['_raw_score'], reverse=True)
+            
+            # Display summary
+            feasible_count = sum(1 for r in sub_results if r['Feasible'] == '✅')
+            col1, col2, col3 = st.columns(3)
+            with col1:
+                st.metric("Total Substitutions", len(sub_results))
+            with col2:
+                st.metric("Feasible Alternatives", feasible_count)
+            with col3:
+                st.metric("Original Stability", result.predicted_properties.get('formation_energy_eV_atom', 'N/A'))
+            
+            st.markdown("---")
+            
+            # Display each substitution
+            for idx, res in enumerate(sub_results, 1):
+                emoji = res['Feasible']
+                
+                with st.expander(
+                    f"{emoji} Alternative #{idx}: {res['Formula']} - {res['Substitution']} - {res['Stability']} Stability",
+                    expanded=(idx <= 3)
+                ):
+                    # Highlight the swap
+                    st.markdown(f"### {result.final_formula} → {res['Formula']}")
+                    st.markdown(f"**Element Swap:** {res['Original Element']} → **{res['New Element']}**")
+                    st.markdown("")
+                    
+                    # Display precursors for new formula
+                    st.markdown("**Required Precursors:**")
+                    precursor_display = ' + '.join([f"**{p}**" for p in res['Precursors']])
+                    st.markdown(precursor_display)
+                    
+                    # Display metrics
+                    metric_cols = st.columns(3)
+                    with metric_cols[0]:
+                        st.metric("Formation Energy", res['Formation Energy (eV/atom)'])
+                    with metric_cols[1]:
+                        st.metric("Stability Rating", res['Stability'])
+                    with metric_cols[2]:
+                        st.metric("Status", "Feasible" if res['Feasible'] == '✅' else "Questionable")
+                    
+                    # Comparison with original
+                    original_energy = result.predicted_properties.get('formation_energy_eV_atom', 0.0)
+                    energy_diff = res['_raw_energy'] - original_energy
+                    
+                    if abs(energy_diff) < 0.5:
+                        st.success(f"✓ Similar stability to original (Δ = {energy_diff:.3f} eV/atom)")
+                    elif energy_diff < 0:
+                        st.success(f"✓ More stable than original (Δ = {energy_diff:.3f} eV/atom)")
+                    else:
+                        st.warning(f"⚠ Less stable than original (Δ = {energy_diff:.3f} eV/atom)")
+                    
+                    # Button to view full synthesis for this alternative
+                    if st.button(f"🔬 View Full Synthesis Protocol", key=f"synth_{idx}"):
+                        st.info(f"Run the pipeline with '{res['Formula']}' to get full synthesis details!")
+        
+        except Exception as e:
+            st.error(f"Error generating substitutions: {e}")
+            import traceback
+            st.code(traceback.format_exc())
+
+
+def display_precursor_swaps(result: PipelineResult):
+    """Display precursor swaps for the same formula."""
+    st.markdown("### 🔧 Precursor Alternatives for Same Formula")
     
     with st.spinner("Generating precursor combinations..."):
         try:
@@ -1213,9 +1399,7 @@ def display_explorer_page(pipeline):
         sub_ti_zr = st.checkbox("Ti → Zr")
         sub_ti_hf = st.checkbox("Ti → Hf")
         sub_o_s = st.checkbox("O → S")
-        sub_f_cl = st.checkbox("F → Cl", value=default_f_cl)
-        sub_ti_hf = st.checkbox("Ti → Hf")
-        sub_o_s = st.checkbox("O → S")
+        sub_o_se = st.checkbox("O → Se")
         sub_f_cl = st.checkbox("F → Cl", value=default_f_cl)
     
     # Collect selected substitutions
@@ -1236,6 +1420,7 @@ def display_explorer_page(pipeline):
         'Ti → Hf': {'Ti': 'Hf'} if sub_ti_hf else None,
         'O → S': {'O': 'S'} if sub_o_s else None,
         'O → Se': {'O': 'Se'} if sub_o_se else None,
+        'F → Cl': {'F': 'Cl'} if sub_f_cl else None,
     }
     
     selected_subs = {k: v for k, v in substitutions_map.items() if v is not None}
