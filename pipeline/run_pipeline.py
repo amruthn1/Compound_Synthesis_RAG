@@ -147,12 +147,13 @@ class MaterialsPipeline:
         print("\nℹ️  Vector database is empty. Use 'Scrape Papers' in sidebar to populate.")
         print("="*80 + "\n")
     
-    def populate_database_from_reactions(self, force_reload: bool = False):
+    def populate_database_from_reactions(self, force_reload: bool = False, progress_callback=None):
         """
         Manually populate vector database from reaction.csv.
         
         Args:
             force_reload: If True, reload even if database has entries
+            progress_callback: Optional callback function(current, total, message)
         
         Call this if automatic loading during init failed.
         """
@@ -173,7 +174,7 @@ class MaterialsPipeline:
         print(f"Starting paper scraping...")
         
         # Force reload by temporarily clearing the check
-        self._load_sample_reactions_to_db()
+        self._load_sample_reactions_to_db(progress_callback=progress_callback)
         
         # Check final status
         final_stats = self.embedder.get_collection_stats()
@@ -548,8 +549,12 @@ class MaterialsPipeline:
             warnings=[]
         )
     
-    def _load_sample_reactions_to_db(self):
-        """Scrape and load real papers from PubMed/arXiv for reactions in reaction.csv."""
+    def _load_sample_reactions_to_db(self, progress_callback=None):
+        """Scrape and load real papers from PubMed/arXiv for reactions in reaction.csv.
+        
+        Args:
+            progress_callback: Optional callback function(current, total, message)
+        """
         import os
         import pandas as pd
         from ingestion.paper_scraper import PaperScraper
@@ -596,7 +601,10 @@ class MaterialsPipeline:
             for idx, row in df.iterrows():
                 composition = row.get('composition', '')
                 precursors_str = row.get('precursors', '')
-                
+                msg = f"Scraping papers for {composition}"
+                print(f"  [{idx+1}/{len(df)}] {msg}...")
+                if progress_callback:
+                    progress_callback(idx, len(df), msg
                 # Parse precursors list
                 precursors_list = [p.strip() for p in precursors_str.split(',')]
                 

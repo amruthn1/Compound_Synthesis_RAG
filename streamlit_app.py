@@ -554,22 +554,25 @@ def display_explorer_page(pipeline):
             st.error("Please select at least one substitution")
             st.stop()
         
-        with st.spinner(f"Exploring {len(selected_subs) + 1} material variations (with AlignFF relaxation)..."):
-            results = []
-            progress_bar = st.progress(0)
-            status_text = st.empty()
-            
-            # Process base material
-            status_text.text(f"Processing base material: {base_material}")
-            try:
-                result = pipeline.run_materials_pipeline(
-                    composition=base_material,
-                    substitutions=None,
-                    generate_cif=True,
-                    predict_properties=True,
-                    generate_synthesis=False,
-                    retrieve_top_k=0
-                )
+        # Processing with detailed progress
+        st.markdown("---")
+        st.subheader("⚙️ Exploring Material Variations")
+        results = []
+        progress_bar = st.progress(0)
+        status_text = st.empty()
+        total_materials = len(selected_subs) + 1
+        
+        # Process base material
+        status_text.text(f"[1/{total_materials}] Processing base material: {base_material}")
+        try:
+            result = pipeline.run_materials_pipeline(
+                composition=base_material,
+                substitutions=None,
+                generate_cif=True,
+                predict_properties=True,
+                generate_synthesis=False,
+                retrieve_top_k=0
+            )
                 
                 if result.success and result.predicted_properties:
                     results.append({
@@ -580,11 +583,11 @@ def display_explorer_page(pipeline):
                         'Density (g/cm³)': result.predicted_properties.get('density_g_cm3', float('nan')),
                         'Status': '✓'
                     })
-            except Exception as e:
-                st.warning(f"Base material failed: {str(e)[:100]}")
+            except Exception as e:total_materials)
             
-            progress_bar.progress(1 / (len(selected_subs) + 1))
-            
+            # Process variations
+            for i, (sub_name, sub_dict) in enumerate(selected_subs.items(), 1):
+                status_text.text(f"[{i+1}/{total_materials}] Processing variation
             # Process variations
             for i, (sub_name, sub_dict) in enumerate(selected_subs.items(), 1):
                 status_text.text(f"Processing variation {i}/{len(selected_subs)}: {sub_name}")
@@ -611,8 +614,13 @@ def display_explorer_page(pipeline):
                 except Exception as e:
                     st.warning(f"{sub_name} failed: {str(e)[:100]}")
                 
-                progress_bar.progress((i + 1) / (len(selected_subs) + 1))
+                progress_bar.progress((i + 1) / total_materials)
             
+            # Completion
+            progress_bar.progress(1.0)
+            status_text.text("✓ All variations processed!")
+            import time
+            time.sleep(0.5)
             status_text.empty()
             progress_bar.empty()
         
@@ -705,15 +713,30 @@ def main():
     if st.session_state.get('populate_db', False):
         st.session_state['populate_db'] = False
         
-        with st.spinner("Populating database from reaction.csv..."):
-            try:
-                paper_count = pipeline.populate_database_from_reactions(force_reload=False)
-                if paper_count > 0:
-                    st.success(f"✓ Database populated with {paper_count} papers!")
-                else:
-                    st.warning("Database already populated or no papers found")
-            except Exception as e:
-                st.error(f"Failed to populate database: {e}")
+        st.subheader("📚 Populating Database")
+        progress_bar = st.progress(0)
+        status_text = st.empty()
+        
+        def update_progress(current, total, message):
+            progress = (current + 1) / total
+            progress_bar.progress(progress)
+            status_text.text(f"[{current+1}/{total}] {message}")
+        
+        try:
+            paper_count = pipeline.populate_database_from_reactions(
+                force_reload=False,
+                progress_callback=update_progress
+            )
+            progress_bar.empty()
+            status_text.empty()
+            if paper_count > 0:
+                st.success(f"✓ Database populated with {paper_count} papers!")
+            else:
+                st.info("ℹ️ Database already populated or no papers found")
+        except Exception as e:
+            progress_bar.empty()
+            status_text.empty()
+            st.error(f"Failed to populate database: {e}")
     
     # Page selection
     page = st.sidebar.radio(
@@ -744,27 +767,62 @@ def main():
                 st.error("Please enter a chemical formula")
                 st.stop()
             
-            # Run pipeline (THE ONLY SOURCE OF LOGIC)
-            with st.spinner("Running materials discovery pipeline..."):
-                try:
-                    result = pipeline.run_materials_pipeline(
-                        composition=composition,
-                        substitutions=substitutions,
-                        generate_cif=options['generate_cif'],
-                        predict_properties=options['predict_properties'],
-                        generate_synthesis=options['generate_synthesis'],
-                        scrape_papers=options['scrape_papers'],
-                        retrieve_top_k=options['retrieve_top_k']
-                    )
-                    
-                    # Store in session state
-                    st.session_state['last_result'] = result
-                    
-                except Exception as e:
-                    st.error(f"Pipeline failed: {e}")
-                    import traceback
-                    st.code(traceback.format_exc())
-                    st.stop()
+            # Run pipeline with progress indicators
+            st.markdown("---")
+            st.subheader("⚙️ Processing")
+            progress_bar = st.progress(0)
+            status_text = st.empty()
+            
+            steps = []
+            if substitutions:
+                steps.append("Element substitution")
+            if options['generate_cif']:
+                steps.append("CIF generation")
+            if options['predict_properties']:
+                steps.append("Property prediction")
+            if options['scrape_papers'] or options['retrieve_top_k'] > 0:
+                steps.append("Paper retrieval")
+            if options['generate_synthesis']:
+                steps.append("Synthesis generation")
+            
+            total_steps = len(steps)
+            
+            try:
+                for i, step in enumerate(steps):
+                    progress = i / total_steps
+                    progress_bar.progress(progress)
+                    status_text.text(f"[{i+1}/{total_steps}] {step}...")
+                
+                progress_bar.progress(0.5)
+                status_text.text("Running pipeline...")
+                
+                result = pipeline.run_materials_pipeline(
+                    composition=composition,
+                    substitutions=substitutions,
+                    generate_cif=options['generate_cif'],
+                    predict_properties=options['predict_properties'],
+                    generate_synthesis=options['generate_synthesis'],
+                    scrape_papers=options['scrape_papers'],
+                    retrieve_top_k=options['retrieve_top_k']
+                )
+                
+                progress_bar.progress(1.0)
+                status_text.text("✓ Complete!")
+                
+                # Store in session state
+                st.session_state['last_result'] = result
+                
+                # Clean up progress indicators
+                progress_bar.empty()
+                status_text.empty()
+                
+            except Exception as e:
+                progress_bar.empty()
+                status_text.empty()
+                st.error(f"Pipeline failed: {e}")
+                import traceback
+                st.code(traceback.format_exc())
+                st.stop()
         
         # Display results
         if 'last_result' in st.session_state:
