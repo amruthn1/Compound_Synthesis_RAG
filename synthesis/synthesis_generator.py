@@ -239,32 +239,76 @@ class SynthesisGenerator:
         context = "\n\n".join(context_parts)
         
         # Construct prompt for LLM
-        prompt = f"""You are a materials science expert analyzing scientific literature to guide synthesis of {formula}.
+        prompt = f"""You are a materials science expert analyzing scientific literature to provide DETAILED synthesis guidance for {formula}.
 
 ⚠️ IMPORTANT: The papers below discuss RELATED MATERIALS and PRECURSORS, not {formula} specifically.
 This is EXPECTED and CORRECT - extract general synthesis knowledge that applies to similar compounds.
 
 Your task:
-- Extract synthesis parameters from papers about related materials/precursors
+- Extract COMPREHENSIVE synthesis parameters from papers about related materials/precursors
 - Focus on techniques applicable to solid-state ceramic/oxide synthesis
-- Provide specific numbers where available (temperatures, rates, times)
-- Adapt the information reasonably for {formula}
+- Provide SPECIFIC NUMBERS where available (temperatures, rates, times)
+- Give detailed step-by-step procedures adapted for {formula}
 
-Extract these synthesis parameters:
+Extract these synthesis parameters with MAXIMUM DETAIL:
 
-1. **Temperatures**: calcination, sintering, annealing temperatures (°C)
-2. **Heating/cooling rates**: ramp rates (°C/min)
-3. **Holding times**: duration at target temperature (hours)
-4. **Atmosphere**: air, O2, N2, Ar, vacuum, reducing conditions
-5. **Equipment**: furnace type, crucible material (alumina, platinum, etc.)
-6. **Precursor preparation**: drying, grinding, mixing techniques
-7. **Best practices**: optimization tips, common issues, troubleshooting
+1. **Temperatures** (provide specific ranges):
+   - Calcination temperature: XXX-XXX°C (with justification)
+   - Sintering temperature: XXX-XXX°C (typical range)
+   - Annealing temperature: XXX-XXX°C (if applicable)
+   - Intermediate heating steps (if any)
+
+2. **Heating/Cooling Rates** (be specific):
+   - Ramp rate from room temp to target: X-X°C/min
+   - Cooling rate: X-X°C/min or furnace cooling
+   - Any slow cooling requirements
+
+3. **Holding Times** (exact durations):
+   - Duration at calcination temp: X-X hours
+   - Duration at sintering temp: X-X hours
+   - Total cycle time estimation
+
+4. **Atmosphere Control** (detailed):
+   - Gas type: air, O2, N2, Ar, vacuum, reducing atmosphere
+   - Flow rate: XX-XX mL/min (if applicable)
+   - Humidity control requirements
+   - Sealed vs. open crucible
+
+5. **Equipment Specifications**:
+   - Furnace type: tube furnace, box furnace, etc.
+   - Crucible material: alumina, platinum, zirconia (with reason)
+   - Crucible size and sample loading
+   - Temperature control accuracy needed
+
+6. **Precursor Preparation** (step-by-step):
+   - Drying conditions: temperature and duration
+   - Grinding method: ball mill, mortar-pestle, duration
+   - Mixing techniques: wet vs. dry mixing
+   - Pellet pressing (if applicable): pressure, size
+
+7. **Multi-Step Procedures**:
+   - Number of heating cycles required
+   - Intermediate grinding between cycles
+   - Phase evolution during synthesis
+
+8. **Quality Control**:
+   - Expected product appearance (color, texture)
+   - XRD patterns to look for
+   - Common impurities and how to avoid them
+   - Yield expectations (%)
+
+9. **Best Practices & Troubleshooting**:
+   - Critical control points
+   - Common synthesis failures and solutions
+   - Optimization tips from literature
+   - Safety considerations specific to this synthesis
 
 Papers (related materials and precursors):
 
 {context}
 
-Based on these papers about related materials, provide synthesis guidance for {formula}:
+Based on these papers about related materials, provide COMPREHENSIVE, DETAILED synthesis guidance for {formula}.
+Include specific numbers, ranges, and step-by-step instructions wherever possible:
 """
         
         try:
@@ -272,7 +316,7 @@ Based on these papers about related materials, provide synthesis guidance for {f
             print(f"  🤖 Querying LLM with {len(context)} characters of context...")
             llm_response = self.llama_agent.generate_text(
                 prompt,
-                max_new_tokens=800,
+                max_new_tokens=1500,  # Increased for more detailed output
                 temperature=0.3  # Low temperature for factual extraction
             )
             print(f"  ✓ LLM extraction complete ({len(llm_response)} characters)")
@@ -327,27 +371,68 @@ Based on these papers about related materials, provide synthesis guidance for {f
         lines.append("\nSTEP 1: Precursor Preparation and Weighing")
         lines.append("Duration: 30-45 minutes")
         lines.append("Equipment: Analytical balance (±0.0001g), weighing boats, desiccator")
+        lines.append("Critical Parameters:")
+        lines.append("  • Balance accuracy: ±0.1 mg minimum")
+        lines.append("  • Relative humidity: <40% (use glove box if hygroscopic materials)")
+        lines.append("  • Temperature: room temperature (20-25°C)")
         lines.append("\nProcedure:")
         lines.extend([
-            "  a) Dry all precursors in oven at 110°C for 2 hours to remove moisture",
-            "  b) Cool in desiccator for 30 minutes before weighing",
+            "  a) Pre-dry all precursors in oven at 110-120°C for 2-4 hours",
+            "     → Remove surface moisture and adsorbed water",
+            "     → Critical for accurate stoichiometry",
+            "  b) Cool in desiccator with fresh CaCl2 or silica gel for 30 minutes",
+            "     → Prevents moisture re-absorption",
+            "     → Allow thermal equilibration to prevent air currents",
             "  c) Weigh precursors according to stoichiometric calculations above",
+            "     → Record masses to 0.0001g precision",
+            "     → Work quickly to minimize air exposure",
             "  d) Transfer to clean, dry agate mortar immediately after weighing",
-            "  e) Record actual masses for yield calculations"
+            "     → Avoid contamination from previous syntheses",
+            "     → Pre-clean mortar with ethanol and dry at 110°C",
+            "  e) Record actual masses for yield calculations",
+            "     → Note any deviations from target masses (±0.5% acceptable)"
         ])
         
         # Step 2: Mixing
         lines.append("\nSTEP 2: Thorough Mixing of Precursors")
-        lines.append("Duration: 20-30 minutes")
-        lines.append("Equipment: Agate mortar and pestle, ethanol (anhydrous, 99.5%)")
-        lines.append("\nProcedure:")
+        lines.append("Duration: 30-45 minutes")
+        lines.append("Equipment: Agate mortar and pestle (preferred) or ball mill")
+        lines.append("Grinding aid: Anhydrous ethanol (99.5%+) or acetone")
+        lines.append("\nCritical Parameters:")
+        lines.append("  • Particle size target: <10 μm for good reactivity")
+        lines.append("  • Mixing uniformity: homogeneous color/texture throughout")
+        lines.append("  • Contamination prevention: clean tools between batches")
+        lines.append("\nProcedure (Manual Grinding):")
         lines.extend([
             "  a) Add precursors to mortar in order of decreasing mass",
-            "  b) Grind manually in circular motion for 10 minutes",
-            "  c) Add 2-3 drops of anhydrous ethanol to aid mixing",
-            "  d) Continue grinding for additional 10-15 minutes",
-            "  e) Scrape sides and bottom of mortar to ensure complete mixing",
-            "  f) Final mixture should be homogeneous powder with no visible clumps"
+            "     → Heavier components first for better mixing efficiency",
+            "     → Note: If using hygroscopic materials, work in glove box",
+            "  b) Grind manually in circular and figure-8 motion for 10-15 minutes",
+            "     → Apply moderate pressure (not crushing force)",
+            "     → Mixture should become visibly more uniform",
+            "  c) Add 3-5 drops of anhydrous ethanol to aid mixing",
+            "     → Ethanol acts as dispersant and reduces agglomeration",
+            "     → Alternative: acetone (faster drying) or isopropanol",
+            "  d) Continue grinding for additional 15-20 minutes",
+            "     → Powder should have paste-like consistency with ethanol",
+            "     → Gradually becomes free-flowing as ethanol evaporates",
+            "  e) Scrape sides and bottom of mortar every 5 minutes",
+            "     → Ensures all material is mixed uniformly",
+            "     → Use plastic or ceramic spatula (not metal)",
+            "  f) Final mixture should be:",
+            "     → Homogeneous powder with uniform color",
+            "     → No visible clumps or separate phases",
+            "     → Free-flowing (not caked or sticky)",
+            "     → Particle size: fine powder (talc-like texture)"
+        ])
+        lines.append("\nAlternative - Ball Milling (for larger batches or better homogeneity):")
+        lines.extend([
+            "  • Mill type: planetary ball mill or tumbler",
+            "  • Milling media: zirconia or alumina balls (5-10 mm diameter)",
+            "  • Ball-to-powder ratio: 10:1 to 20:1 by mass",
+            "  • Milling speed: 200-400 rpm",
+            "  • Duration: 2-6 hours with ethanol",
+            "  • Result: Superior particle size reduction (<5 μm) and mixing"
         ])
         
         # Step 3: Drying
@@ -365,46 +450,106 @@ Based on these papers about related materials, provide synthesis guidance for {f
         # Step 4: Calcination/Sintering
         temp = self._estimate_synthesis_temperature(composition)
         lines.append("\nSTEP 4: High-Temperature Calcination/Sintering")
-        lines.append(f"Duration: 8-14 hours (including heating and cooling)")
+        lines.append(f"Duration: 10-16 hours (including heating and cooling)")
         lines.append(f"Equipment: High-temperature furnace, alumina/platinum crucible")
+        lines.append("\nCritical Parameters:")
+        lines.append(f"  • Temperature accuracy: ±5°C at {temp}°C")
+        lines.append("  • Temperature uniformity: ±10°C across sample")
+        lines.append("  • Atmosphere purity: 99.9%+ if using inert gas")
+        lines.append("  • Crucible fill: 1/3 to 1/2 full (allow for gas evolution)")
         lines.append("\nTemperature Profile:")
         lines.extend([
             f"  Target Temperature: {temp}°C",
             "  ",
-            "  Detailed Heating Schedule:",
-            f"    • 25°C → 300°C at 5°C/min (55 min)",
-            f"    • 300°C → {temp}°C at 3-5°C/min (variable)",
-            f"    • Hold at {temp}°C for 6-12 hours",
-            f"    • {temp}°C → 25°C at 5°C/min (furnace cool, natural rate)",
+            "  DETAILED HEATING SCHEDULE:",
+            "  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━",
+            "  Phase 1: Initial Heating & Solvent Removal",
+            "    • 25°C → 200°C at 5°C/min (35 minutes)",
+            "    • Purpose: Remove residual ethanol/water without spattering",
             "  ",
-            "  Total cycle time: ~10-16 hours"
+            "  Phase 2: Intermediate Heating & Decomposition",
+            f"    • 200°C → 500°C at 5°C/min (60 minutes)",
+            "    • Purpose: Decompose carbonates, nitrates, precursor compounds",
+            "    • Note: May see color changes, gas evolution",
+            "  ",
+            "  Phase 3: High-Temperature Ramp",
+            f"    • 500°C → {temp}°C at 3-5°C/min ({int((temp-500)/4)} min @ 4°C/min)",
+            "    • Purpose: Approach reaction temperature gradually",
+            "    • Slower rate prevents thermal shock and ensures uniformity",
+            "  ",
+            "  Phase 4: Reaction Hold (CRITICAL)",
+            f"    • Hold at {temp}°C for 8-12 hours",
+            "    • Purpose: Complete solid-state diffusion and phase formation",
+            "    • Minimum: 6 hours for small crystallites",
+            "    • Optimal: 10-12 hours for high crystallinity",
+            "    • Extended: 18-24 hours for difficult formations",
+            "  ",
+            "  Phase 5: Controlled Cooling",
+            f"    • {temp}°C → 500°C at 5°C/min (slow cool, {int((temp-500)/5)} min)",
+            "    • 500°C → 25°C: furnace cool (natural rate, ~4-6 hours)",
+            "    • Purpose: Prevent thermal stress, maintain crystal structure",
+            "    • Note: Some materials require slower cooling (2°C/min)",
+            "  ",
+            f"  TOTAL CYCLE TIME: ~12-18 hours",
+            "  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
         ])
         
         lines.append("\nAtmosphere Control:")
         # Determine atmosphere based on composition
         if 'O' in composition:
-            lines.append("  • Air or O2 atmosphere (for oxide formation)")
-            lines.append("  • Flow rate: 50-100 mL/min if using flowing gas")
+            lines.append("  • ATMOSPHERE: Air or O2 atmosphere (for oxide formation)")
+            lines.append("  • Gas flow rate: 50-100 mL/min if using flowing gas")
+            lines.append("  • Static vs. flowing: Static air acceptable for most oxides")
+            lines.append("  • Crucible: Open or loosely covered (allow O2 access)")
+            lines.append("  • Reason: Oxygen incorporation into crystal structure")
         elif 'F' in composition:
-            lines.append("  • Dry nitrogen or argon atmosphere (prevent hydrolysis)")
-            lines.append("  • Flow rate: 100 mL/min")
-            lines.append("  • CRITICAL: Ensure atmosphere is DRY (use drying column)")
+            lines.append("  • ATMOSPHERE: Dry nitrogen (N2) or argon (Ar) - CRITICAL")
+            lines.append("  • Gas purity: 99.99%+ (use ultra-high purity grade)")
+            lines.append("  • Flow rate: 100-200 mL/min (positive pressure)")
+            lines.append("  • Drying: Pass gas through molecular sieve column or P2O5")
+            lines.append("  • Crucible: Covered with lid (small gap for gas flow)")
+            lines.append("  • CRITICAL: Fluorides are hygroscopic and hydrolyze in moist air")
+            lines.append("  • WARNING: Even trace moisture will cause HF formation")
+            lines.append("  • Humidity: <5 ppm H2O in gas stream")
         elif 'N' in composition:
-            lines.append("  • Ammonia (NH3) or nitrogen atmosphere")
-            lines.append("  • Flow rate: 50-100 mL/min")
+            lines.append("  • ATMOSPHERE: Ammonia (NH3) or nitrogen (N2)")
+            lines.append("  • For nitrides: NH3 flow at 50-100 mL/min")
+            lines.append("  • For nitrogen incorporation: N2 at 99.99%+ purity")
+            lines.append("  • Flow rate: 50-150 mL/min")
+            lines.append("  • WARNING: NH3 is toxic and corrosive - use fume hood")
         else:
-            lines.append("  • Inert atmosphere (Ar or N2) recommended")
+            lines.append("  • ATMOSPHERE: Inert (Ar or N2) recommended")
+            lines.append("  • Gas purity: 99.9%+ (standard grade acceptable)")
             lines.append("  • Flow rate: 50-100 mL/min")
+            lines.append("  • Reason: Prevent oxidation/contamination")
+            lines.append("  • Alternative: Air if no reactive elements present")
         
-        lines.append("\nProcedure:")
+        lines.append("\nFurnace Loading Procedure:")
         lines.extend([
-            "  a) Place dried sample in crucible (loosely packed, not compressed)",
-            "  b) Cover crucible with lid (leave small gap for gas exchange)",
-            "  c) Load into furnace at room temperature",
-            "  d) Start temperature program as specified above",
-            "  e) Monitor furnace periodically (first 2 hours critical)",
-            "  f) After completion, allow furnace to cool naturally",
-            "  g) Remove sample only when furnace is below 100°C"
+            "  a) Place dried sample in crucible:",
+            "     → Fill to 1/3-1/2 capacity (loosely packed, not compressed)",
+            "     → Reason: Allow gas circulation and prevent sintering to crucible",
+            "  b) Cover crucible appropriately:",
+            "     → For oxides: loose cover or uncovered",
+            "     → For fluorides: tight cover with small vent hole",
+            "     → For volatile components: sealed crucible within larger crucible",
+            "  c) Load into furnace at room temperature:",
+            "     → Never load into hot furnace (thermal shock)",
+            "     → Position in center of hot zone for uniform temperature",
+            "  d) Connect gas lines (if using controlled atmosphere):",
+            "     → Purge furnace with 3 volume changes before heating",
+            "     → Maintain positive pressure throughout heating",
+            "  e) Start temperature program as specified above",
+            "  f) Monitor furnace during first 2 hours (CRITICAL):",
+            "     → Watch for unusual smoke, odors, or temperature spikes",
+            "     → Check gas flow rates remain constant",
+            "     → Verify controller following programmed profile",
+            "  g) After completion, allow furnace to cool naturally:",
+            "     → Do NOT open furnace above 200°C",
+            "     → For fluorides: maintain inert atmosphere during cooling",
+            "  h) Remove sample only when furnace is below 100°C:",
+            "     → Use tongs or heat-resistant gloves",
+            "     → Transfer immediately to desiccator"
         ])
         
         # Step 5: Post-processing
