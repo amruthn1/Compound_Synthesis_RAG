@@ -407,7 +407,7 @@ def display_results(result: PipelineResult):
         st.metric("Papers Retrieved", len(result.retrieved_papers))
     
     # Tabs for different outputs
-    tabs = st.tabs(["🔬 CIF", "📈 Properties", "⚗️ Synthesis", "📚 Literature"])
+    tabs = st.tabs(["🔬 CIF", "📈 Properties", "⚖️ Stoichiometry", "⚗️ Synthesis", "📚 Literature"])
     
     # CIF Tab
     with tabs[0]:
@@ -417,12 +417,16 @@ def display_results(result: PipelineResult):
     with tabs[1]:
         display_properties_section(result)
     
-    # Synthesis Tab
+    # Stoichiometry Tab
     with tabs[2]:
+        display_stoichiometry_section(result)
+    
+    # Synthesis Tab
+    with tabs[3]:
         display_synthesis_section(result)
     
     # Literature Tab
-    with tabs[3]:
+    with tabs[4]:
         display_literature_section(result)
 
 
@@ -452,6 +456,164 @@ def display_cif_section(result: PipelineResult):
         file_name=f"{result.final_formula}.cif",
         mime="text/plain"
     )
+
+
+def calculate_detailed_stoichiometry(formula: str, target_mass: float = 10.0):
+    """Calculate detailed stoichiometry with molecular weights."""
+    from ingestion.parse_reactions import parse_chemical_formula
+    from ingestion.precursor_extraction import infer_precursors
+    from pymatgen.core import Composition
+    
+    comp_dict = parse_chemical_formula(formula)
+    precursors = infer_precursors(comp_dict)
+    
+    # Calculate molecular weight of target compound
+    target_comp = Composition(formula)
+    target_mw = target_comp.weight
+    target_moles = target_mass / target_mw
+    
+    # Calculate precursor amounts
+    precursor_data = []
+    
+    for precursor in precursors:
+        try:
+            prec_comp = Composition(precursor)
+            prec_mw = prec_comp.weight
+            
+            # Find the element this precursor contributes
+            contributing_element = None
+            for elem in prec_comp.elements:
+                if str(elem) in comp_dict:
+                    contributing_element = str(elem)
+                    break
+            
+            if contributing_element:
+                # Calculate moles needed based on target composition
+                target_elem_moles = target_moles * comp_dict[contributing_element]
+                prec_elem_count = prec_comp[contributing_element]
+                
+                # Moles of precursor needed
+                prec_moles_needed = target_elem_moles / prec_elem_count
+                prec_mass_needed = prec_moles_needed * prec_mw
+                
+                precursor_data.append({
+                    'Precursor': precursor,
+                    'Element': contributing_element,
+                    'Molar Mass (g/mol)': f"{prec_mw:.3f}",
+                    'Moles Needed': f"{prec_moles_needed:.6f}",
+                    'Mass Needed (g)': f"{prec_mass_needed:.4f}"
+                })
+        except Exception as e:
+            precursor_data.append({
+                'Precursor': precursor,
+                'Element': 'Error',
+                'Molar Mass (g/mol)': 'N/A',
+                'Moles Needed': 'N/A',
+                'Mass Needed (g)': 'Error'
+            })
+    
+    return precursor_data, target_mw, target_moles
+
+
+def display_stoichiometry_section(result: PipelineResult):
+    """Display detailed stoichiometry calculations."""
+    st.subheader("⚖️ Stoichiometric Calculations")
+    
+    # User input for target mass
+    col1, col2 = st.columns([2, 1])
+    with col1:
+        target_mass = st.number_input(
+            "Target product mass (grams)",
+            min_value=0.1,
+            max_value=1000.0,
+            value=10.0,
+            step=1.0,
+            help="Enter the desired amount of final product to synthesize"
+        )
+    with col2:
+        st.metric("Target Formula", result.final_formula)
+    
+    try:
+        precursor_data, target_mw, target_moles = calculate_detailed_stoichiometry(
+            result.final_formula,
+            target_mass
+        )
+        
+        # Display target compound info
+        st.markdown("#### 🎯 Target Compound")
+        info_cols = st.columns(3)
+        with info_cols[0]:
+            st.metric("Formula", result.final_formula)
+        with info_cols[1]:
+            st.metric("Molar Mass", f"{target_mw:.3f} g/mol")
+        with info_cols[2]:
+            st.metric("Moles", f"{target_moles:.6f} mol")
+        
+        st.markdown("---")
+        
+        # Display precursor requirements
+        st.markdown("#### 📦 Required Precursors")
+        st.markdown(f"*To synthesize **{target_mass:.2f} g** of {result.final_formula}*")
+        
+        # Create DataFrame for better display
+        import pandas as pd
+        df = pd.DataFrame(precursor_data)
+        
+        # Style the dataframe
+        st.dataframe(
+            df,
+            use_container_width=True,
+            hide_index=True
+        )
+        
+        # Calculate total mass
+        try:
+            total_precursor_mass = sum(
+                float(row['Mass Needed (g)']) 
+                for row in precursor_data 
+                if row['Mass Needed (g)'] != 'Error'
+            )
+            
+            st.markdown("---")
+            st.markdown("#### 📊 Summary")
+            summary_cols = st.columns(3)
+            
+            with summary_cols[0]:
+                st.metric("Total Precursor Mass", f"{total_precursor_mass:.4f} g")
+            with summary_cols[1]:
+                mass_loss_percent = ((total_precursor_mass - target_mass) / total_precursor_mass) * 100
+                st.metric("Expected Mass Loss", f"{mass_loss_percent:.1f}%",
+                         help="Due to decomposition (e.g., CO2 from carbonates)")
+            with summary_cols[2]:
+                theoretical_yield = (target_mass / total_precursor_mass) * 100
+                st.metric("Theoretical Yield", f"{theoretical_yield:.1f}%")
+        except:
+            pass
+        
+        # Preparation instructions
+        st.markdown("---")
+        st.markdown("#### 📝 Weighing Instructions")
+        st.info("""
+        **Procedure:**
+        1. Pre-dry all precursors at 110°C for 2-4 hours
+        2. Cool in desiccator for 30 minutes
+        3. Weigh each precursor according to the table above (±0.1 mg accuracy)
+        4. Record actual masses for yield calculations
+        5. Mix thoroughly according to synthesis procedure
+        """)
+        
+        # Download button
+        csv_data = df.to_csv(index=False)
+        st.download_button(
+            label="📥 Download Stoichiometry Table (CSV)",
+            data=csv_data,
+            file_name=f"{result.final_formula}_stoichiometry.csv",
+            mime="text/csv"
+        )
+        
+    except Exception as e:
+        st.error(f"Error calculating stoichiometry: {e}")
+        st.info("Unable to calculate detailed stoichiometry. Check that the formula is valid.")
 
 
 def display_properties_section(result: PipelineResult):
