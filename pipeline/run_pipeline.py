@@ -601,14 +601,14 @@ class MaterialsPipeline:
             for idx, row in df.iterrows():
                 composition = row.get('composition', '')
                 precursors_str = row.get('precursors', '')
-                msg = f"Scraping papers for {composition}"
-                print(f"  [{idx+1}/{len(df)}] {msg}...")
-                if progress_callback:
-                    progress_callback(idx, len(df), msg
+                
                 # Parse precursors list
                 precursors_list = [p.strip() for p in precursors_str.split(',')]
                 
-                print(f"  [{idx+1}/{len(df)}] Scraping papers for {composition}...")
+                msg = f"Scraping papers for {composition}"
+                print(f"  [{idx+1}/{len(df)}] {msg}...")
+                if progress_callback:
+                    progress_callback(idx, len(df), msg)
                 
                 try:
                     # Scrape papers for this material and its precursors
