@@ -1284,18 +1284,27 @@ def display_synthesis_section(result: PipelineResult):
                 st.markdown("### 📊 **Temperature**")
                 temp_content = ""
                 for line in conditions['temperature']:
-                    # Bold key terms
+                    # Bold all headings and key terms
+                    line = line.replace('Detailed Heating Schedule:', '**Detailed Heating Schedule:**')
+                    line = line.replace('DETAILED HEATING SCHEDULE:', '**DETAILED HEATING SCHEDULE:**')
                     line = line.replace('Target:', '**Target:**')
                     line = line.replace('Typical range:', '**Typical range:**')
                     line = line.replace('Heating rate:', '**Heating rate:**')
                     line = line.replace('Hold time:', '**Hold time:**')
                     line = line.replace('Cooling rate:', '**Cooling rate:**')
                     line = line.replace('Recommended target:', '**Recommended target:**')
+                    line = line.replace('Total cycle time:', '**Total cycle time:**')
+                    line = line.replace('Phase 1:', '**Phase 1:**')
+                    line = line.replace('Phase 2:', '**Phase 2:**')
+                    line = line.replace('Phase 3:', '**Phase 3:**')
+                    line = line.replace('Phase 4:', '**Phase 4:**')
+                    line = line.replace('Phase 5:', '**Phase 5:**')
                     temp_content += line + "\n\n"
                 st.markdown(temp_content)
             
             # Pressure Section
             if conditions['pressure']:
+                st.markdown("---")
                 st.markdown("### 🔧 **Pressure**")
                 pressure_content = ""
                 for line in conditions['pressure']:
@@ -1305,6 +1314,7 @@ def display_synthesis_section(result: PipelineResult):
             
             # Time Required Section
             if conditions['time_required']:
+                st.markdown("---")
                 st.markdown("### ⏱️ **Time Required**")
                 time_content = ""
                 for line in conditions['time_required']:
@@ -1313,6 +1323,7 @@ def display_synthesis_section(result: PipelineResult):
                     line = line.replace('Reaction phase:', '**Reaction phase:**')
                     line = line.replace('Cooling phase:', '**Cooling phase:**')
                     line = line.replace('Total estimated time:', '**Total estimated time:**')
+                    line = line.replace('Multiple cycles', '**Multiple cycles**')
                     time_content += line + "\n\n"
                 st.markdown(time_content)
         
@@ -1322,16 +1333,23 @@ def display_synthesis_section(result: PipelineResult):
                 st.markdown("### 🌬️ **Atmosphere**")
                 atm_content = ""
                 for line in conditions['atmosphere']:
-                    # Bold key terms
+                    # Bold all headings and key terms
+                    line = line.replace('Atmosphere Control:', '**Atmosphere Control:**')
+                    line = line.replace('ATMOSPHERE:', '**ATMOSPHERE:**')
+                    line = line.replace('Furnace Loading Procedure:', '**Furnace Loading Procedure:**')
+                    line = line.replace('Procedure:', '**Procedure:**')
                     line = line.replace('Inert atmosphere', '**Inert atmosphere**')
                     line = line.replace('Air or O2', '**Air or O2**')
                     line = line.replace('Flow rate:', '**Flow rate:**')
                     line = line.replace('Gas purity:', '**Gas purity:**')
+                    line = line.replace('CRITICAL:', '**⚠️ CRITICAL:**')
+                    line = line.replace('WARNING:', '**⚠️ WARNING:**')
                     atm_content += line + "\n\n"
                 st.markdown(atm_content)
             
             # Synthesis Method Section
             if conditions['synthesis_method']:
+                st.markdown("---")
                 st.markdown("### 🧪 **Synthesis Method**")
                 method_content = ""
                 for line in conditions['synthesis_method']:
@@ -1341,11 +1359,13 @@ def display_synthesis_section(result: PipelineResult):
             
             # Reaction Type Section
             if conditions['reaction_type']:
+                st.markdown("---")
                 st.markdown("### 🔬 **Reaction Type**")
                 reaction_content = ""
                 for line in conditions['reaction_type']:
-                    # Bold the reaction equation
-                    if '→' in line:
+                    # Bold the reaction equation and headings
+                    line = line.replace('Reaction:', '**Reaction:**')
+                    if '→' in line and not line.startswith('Reaction'):
                         line = f"**{line}**"
                     reaction_content += line + "\n\n"
                 st.markdown(reaction_content)
