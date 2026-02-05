@@ -407,7 +407,7 @@ def display_results(result: PipelineResult):
         st.metric("Papers Retrieved", len(result.retrieved_papers))
     
     # Tabs for different outputs
-    tabs = st.tabs(["🔬 CIF", "📈 Properties", "⚖️ Stoichiometry", "⚗️ Synthesis", "📚 Literature"])
+    tabs = st.tabs(["🔬 CIF", "📈 Properties", "⚖️ Stoichiometry", "🔄 Precursor Alternatives", "⚗️ Synthesis", "📚 Literature"])
     
     # CIF Tab
     with tabs[0]:
@@ -421,12 +421,16 @@ def display_results(result: PipelineResult):
     with tabs[2]:
         display_stoichiometry_section(result)
     
-    # Synthesis Tab
+    # Precursor Alternatives Tab
     with tabs[3]:
+        display_precursor_combinations_section(result)
+    
+    # Synthesis Tab
+    with tabs[4]:
         display_synthesis_section(result)
     
     # Literature Tab
-    with tabs[4]:
+    with tabs[5]:
         display_literature_section(result)
 
 
@@ -456,6 +460,260 @@ def display_cif_section(result: PipelineResult):
         file_name=f"{result.final_formula}.cif",
         mime="text/plain"
     )
+
+
+def generate_precursor_combinations(formula: str, max_combinations: int = 20):
+    """Generate all feasible precursor combinations for a given formula."""
+    from ingestion.parse_reactions import parse_chemical_formula
+    from ingestion.precursor_extraction import get_precursor_alternatives
+    from pymatgen.core import Composition
+    from itertools import product
+    import random
+    
+    comp_dict = parse_chemical_formula(formula)
+    
+    # Get all alternative precursors for each element
+    element_alternatives = {}
+    for element in comp_dict.keys():
+        alternatives = get_precursor_alternatives(element)
+        element_alternatives[element] = alternatives
+    
+    # Generate all combinations (limit to prevent explosion)
+    elements = list(comp_dict.keys())
+    all_alternatives = [element_alternatives[elem] for elem in elements]
+    
+    # Calculate total combinations
+    total_combinations = 1
+    for alts in all_alternatives:
+        total_combinations *= len(alts)
+    
+    # If too many, sample randomly
+    if total_combinations > max_combinations:
+        combinations = []
+        for _ in range(max_combinations):
+            combo = [random.choice(alts) for alts in all_alternatives]
+            combo_dict = dict(zip(elements, combo))
+            if combo_dict not in combinations:
+                combinations.append(combo_dict)
+    else:
+        combinations = []
+        for combo in product(*all_alternatives):
+            combo_dict = dict(zip(elements, combo))
+            combinations.append(combo_dict)
+    
+    return combinations, element_alternatives
+
+
+def evaluate_precursor_feasibility(precursor_combo: Dict[str, str], formula: str):
+    """Evaluate feasibility of a precursor combination."""
+    from pymatgen.core import Composition
+    from prediction.alignff_predict import AlignFFPredictor
+    
+    # Initialize predictor (uses fallback if ALIGNN not available)
+    predictor = AlignFFPredictor()
+    
+    # Calculate formation energy estimate
+    from ingestion.parse_reactions import parse_chemical_formula
+    comp_dict = parse_chemical_formula(formula)
+    predictions = predictor.predict(formula, comp_dict, None)
+    
+    formation_energy = predictions.get('formation_energy_eV_atom', 0.0)
+    
+    # Calculate precursor cost estimate (relative)
+    cost_map = {
+        'CO3': 1.0,  # Carbonates (cheap)
+        'O': 1.2,    # Oxides (moderate)
+        'OH': 1.5,   # Hydroxides (moderate-expensive)
+        'NO3': 2.0,  # Nitrates (expensive)
+        'Cl': 1.8,   # Chlorides (moderate-expensive)
+    }
+    
+    total_cost = 0
+    for precursor in precursor_combo.values():
+        # Estimate cost based on anion
+        cost = 1.5  # default
+        for anion, anion_cost in cost_map.items():
+            if anion in precursor:
+                cost = anion_cost
+                break
+        total_cost += cost
+    
+    avg_cost = total_cost / len(precursor_combo)
+    
+    # Feasibility score (lower formation energy + lower cost = better)
+    # Normalize formation energy (typically -5 to 0 eV/atom)
+    normalized_energy = (formation_energy + 5) / 5  # 0 to 1 scale
+    normalized_cost = (avg_cost - 1) / 1  # 0 to 1 scale
+    
+    # Weighted score (60% stability, 40% cost)
+    feasibility_score = (1 - normalized_energy) * 0.6 + (1 - normalized_cost) * 0.4
+    feasibility_score = max(0, min(1, feasibility_score))  # Clamp to 0-1
+    
+    # Determine if feasible (formation energy < -1.5 eV/atom typically stable)
+    is_feasible = formation_energy < -1.0
+    
+    return {
+        'formation_energy': formation_energy,
+        'avg_cost': avg_cost,
+        'feasibility_score': feasibility_score,
+        'is_feasible': is_feasible,
+        'stability_rating': 'High' if formation_energy < -3.0 else 'Medium' if formation_energy < -2.0 else 'Low'
+    }
+
+
+def display_precursor_combinations_section(result: PipelineResult):
+    """Display feasible precursor combinations validated by ALIGNN."""
+    st.subheader("🔄 Alternative Precursor Combinations")
+    
+    st.info("""
+    This section shows different precursor combinations that could be used to synthesize 
+    the target material, with feasibility assessed based on formation energy predictions.
+    """)
+    
+    with st.spinner("Generating precursor combinations..."):
+        try:
+            combinations, element_alternatives = generate_precursor_combinations(
+                result.final_formula,
+                max_combinations=20
+            )
+            
+            # Display available alternatives per element
+            with st.expander("📋 Available Precursor Options per Element", expanded=False):
+                for element, alternatives in element_alternatives.items():
+                    st.markdown(f"**{element}**: {', '.join(alternatives)}")
+            
+            st.markdown("---")
+            st.markdown(f"#### Evaluated Combinations ({len(combinations)} total)")
+            
+            # Evaluate each combination
+            results = []
+            progress_bar = st.progress(0)
+            for idx, combo in enumerate(combinations):
+                evaluation = evaluate_precursor_feasibility(combo, result.final_formula)
+                results.append({
+                    'Combination': ' + '.join([f"{elem}: {prec}" for elem, prec in combo.items()]),
+                    'Precursors': combo,
+                    'Formation Energy (eV/atom)': f"{evaluation['formation_energy']:.3f}",
+                    'Stability': evaluation['stability_rating'],
+                    'Relative Cost': f"{evaluation['avg_cost']:.2f}",
+                    'Feasibility Score': f"{evaluation['feasibility_score']:.3f}",
+                    'Feasible': '✅' if evaluation['is_feasible'] else '⚠️',
+                    '_raw_score': evaluation['feasibility_score'],
+                    '_raw_energy': evaluation['formation_energy']
+                })
+                progress_bar.progress((idx + 1) / len(combinations))
+            
+            progress_bar.empty()
+            
+            # Sort by feasibility score
+            results.sort(key=lambda x: x['_raw_score'], reverse=True)
+            
+            # Display summary metrics
+            feasible_count = sum(1 for r in results if r['Feasible'] == '✅')
+            col1, col2, col3 = st.columns(3)
+            with col1:
+                st.metric("Total Combinations", len(results))
+            with col2:
+                st.metric("Feasible Combinations", feasible_count)
+            with col3:
+                feasibility_rate = (feasible_count / len(results)) * 100
+                st.metric("Feasibility Rate", f"{feasibility_rate:.1f}%")
+            
+            st.markdown("---")
+            
+            # Filter controls
+            col1, col2 = st.columns(2)
+            with col1:
+                show_only_feasible = st.checkbox("Show only feasible combinations", value=False)
+            with col2:
+                sort_by = st.selectbox(
+                    "Sort by",
+                    ["Feasibility Score", "Formation Energy", "Cost"],
+                    index=0
+                )
+            
+            # Filter and sort
+            display_results = results.copy()
+            if show_only_feasible:
+                display_results = [r for r in display_results if r['Feasible'] == '✅']
+            
+            if sort_by == "Formation Energy":
+                display_results.sort(key=lambda x: x['_raw_energy'])
+            elif sort_by == "Cost":
+                display_results.sort(key=lambda x: float(x['Relative Cost']))
+            
+            # Display results in expandable cards
+            st.markdown(f"### Top {len(display_results)} Combinations")
+            
+            for idx, res in enumerate(display_results, 1):
+                # Color code by feasibility
+                if res['Feasible'] == '✅':
+                    border_color = "green"
+                    emoji = "✅"
+                else:
+                    border_color = "orange"
+                    emoji = "⚠️"
+                
+                with st.expander(
+                    f"{emoji} Combination #{idx} - Score: {res['Feasibility Score']} - {res['Stability']} Stability",
+                    expanded=(idx <= 3)
+                ):
+                    # Display precursors
+                    st.markdown("**Precursors:**")
+                    for elem, prec in res['Precursors'].items():
+                        st.markdown(f"- **{elem}**: `{prec}`")
+                    
+                    # Display metrics
+                    metric_cols = st.columns(4)
+                    with metric_cols[0]:
+                        st.metric("Formation Energy", res['Formation Energy (eV/atom)'])
+                    with metric_cols[1]:
+                        st.metric("Stability", res['Stability'])
+                    with metric_cols[2]:
+                        st.metric("Relative Cost", res['Relative Cost'])
+                    with metric_cols[3]:
+                        st.metric("Feasibility", res['Feasibility Score'])
+                    
+                    # Calculate and show stoichiometry for this combination
+                    if st.button(f"📊 Calculate Stoichiometry", key=f"stoich_{idx}"):
+                        precursor_list = list(res['Precursors'].values())
+                        try:
+                            prec_data, target_mw, target_moles = calculate_detailed_stoichiometry(
+                                result.final_formula,
+                                target_mass=10.0
+                            )
+                            st.markdown("**Stoichiometry for 10g batch:**")
+                            import pandas as pd
+                            df = pd.DataFrame(prec_data)
+                            st.dataframe(df, use_container_width=True, hide_index=True)
+                        except Exception as e:
+                            st.error(f"Could not calculate: {e}")
+            
+            # Export button
+            st.markdown("---")
+            import pandas as pd
+            export_df = pd.DataFrame([{
+                'Rank': i+1,
+                'Precursors': r['Combination'],
+                'Formation Energy (eV/atom)': r['Formation Energy (eV/atom)'],
+                'Stability': r['Stability'],
+                'Relative Cost': r['Relative Cost'],
+                'Feasibility Score': r['Feasibility Score'],
+                'Feasible': r['Feasible']
+            } for i, r in enumerate(display_results)])
+            
+            csv_data = export_df.to_csv(index=False)
+            st.download_button(
+                label="📥 Download All Combinations (CSV)",
+                data=csv_data,
+                file_name=f"{result.final_formula}_precursor_combinations.csv",
+                mime="text/csv"
+            )
+            
+        except Exception as e:
+            st.error(f"Error generating combinations: {e}")
+            import traceback
+            st.code(traceback.format_exc())
 
 
 def calculate_detailed_stoichiometry(formula: str, target_mass: float = 10.0):
