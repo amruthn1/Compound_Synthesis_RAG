@@ -1302,28 +1302,34 @@ def display_synthesis_section(result: PipelineResult):
                     temp_content += line + "\n\n"
                 st.markdown(temp_content)
             
-            # Pressure Section
+            # ⭐ CRITICAL: Pressure Section - BIG BOLD
             if conditions['pressure']:
                 st.markdown("---")
-                st.markdown("### 🔧 **Pressure**")
+                st.markdown("## 🔧 **PRESSURE** 🔧")
                 pressure_content = ""
                 for line in conditions['pressure']:
-                    line = line.replace('Ambient pressure', '**Ambient pressure**')
+                    line = line.replace('Ambient pressure', '**✓ Ambient pressure**')
+                    # Make all pressure lines bold
+                    if line.strip() and not line.strip().startswith('**'):
+                        line = f"**{line}**"
                     pressure_content += line + "\n\n"
                 st.markdown(pressure_content)
             
-            # Time Required Section
+            # ⭐ CRITICAL: Time Required Section - BIG BOLD
             if conditions['time_required']:
                 st.markdown("---")
-                st.markdown("### ⏱️ **Time Required**")
+                st.markdown("## ⏱️ **TIME REQUIRED** ⏱️")
                 time_content = ""
                 for line in conditions['time_required']:
                     # Bold phases
-                    line = line.replace('Heating phase:', '**Heating phase:**')
-                    line = line.replace('Reaction phase:', '**Reaction phase:**')
-                    line = line.replace('Cooling phase:', '**Cooling phase:**')
-                    line = line.replace('Total estimated time:', '**Total estimated time:**')
-                    line = line.replace('Multiple cycles', '**Multiple cycles**')
+                    line = line.replace('Heating phase:', '**⏰ Heating phase:**')
+                    line = line.replace('Reaction phase:', '**⏰ Reaction phase:**')
+                    line = line.replace('Cooling phase:', '**⏰ Cooling phase:**')
+                    line = line.replace('Total estimated time:', '**⏰ Total estimated time:**')
+                    line = line.replace('Multiple cycles', '**🔄 Multiple cycles**')
+                    # Ensure all lines are bold
+                    if line.strip() and not line.strip().startswith('**'):
+                        line = f"**{line}**"
                     time_content += line + "\n\n"
                 st.markdown(time_content)
         
@@ -1347,25 +1353,31 @@ def display_synthesis_section(result: PipelineResult):
                     atm_content += line + "\n\n"
                 st.markdown(atm_content)
             
-            # Synthesis Method Section
+            # ⭐ CRITICAL: Synthesis Method Section - BIG BOLD
             if conditions['synthesis_method']:
                 st.markdown("---")
-                st.markdown("### 🧪 **Synthesis Method**")
+                st.markdown("## 🧪 **SYNTHESIS METHOD** 🧪")
                 method_content = ""
                 for line in conditions['synthesis_method']:
-                    line = line.replace('Solid-state reaction', '**Solid-state reaction**')
+                    line = line.replace('Solid-state reaction', '**✓ Solid-state reaction**')
+                    # Make all method lines bold
+                    if line.strip() and not line.strip().startswith('**'):
+                        line = f"**{line}**"
                     method_content += line + "\n\n"
                 st.markdown(method_content)
             
-            # Reaction Type Section
+            # ⭐ CRITICAL: Reaction Type Section - BIG BOLD
             if conditions['reaction_type']:
                 st.markdown("---")
-                st.markdown("### 🔬 **Reaction Type**")
+                st.markdown("## 🔬 **REACTION TYPE** 🔬")
                 reaction_content = ""
                 for line in conditions['reaction_type']:
                     # Bold the reaction equation and headings
-                    line = line.replace('Reaction:', '**Reaction:**')
-                    if '→' in line and not line.startswith('Reaction'):
+                    line = line.replace('Reaction:', '**⚗️ Reaction:**')
+                    if '→' in line and not line.startswith('**'):
+                        line = f"**{line}**"
+                    # Ensure all lines are bold
+                    if line.strip() and not line.strip().startswith('**'):
                         line = f"**{line}**"
                     reaction_content += line + "\n\n"
                 st.markdown(reaction_content)
