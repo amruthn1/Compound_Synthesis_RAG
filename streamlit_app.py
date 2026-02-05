@@ -1202,12 +1202,12 @@ def parse_reaction_conditions(protocol_text: str) -> dict:
         line_stripped = line.strip()
         
         # Start capturing when we see the reaction conditions header
-        if '🔥 REACTION CONDITIONS' in line_stripped:
+        if '🔥 REACTION CONDITIONS' in line_stripped and '🧪 METHOD' in line_stripped:
             in_reaction_section = True
             continue
         
         # Stop capturing when we hit the next major section
-        if line_stripped.startswith('1. SAFETY') or line_stripped.startswith('2. MATERIALS') or line_stripped.startswith('3. DETAILED'):
+        if in_reaction_section and (line_stripped.startswith('1. SAFETY') or line_stripped.startswith('2. MATERIALS') or line_stripped.startswith('3. DETAILED')):
             break
         
         # Only process lines if we're in the reaction conditions section
@@ -1218,28 +1218,28 @@ def parse_reaction_conditions(protocol_text: str) -> dict:
         if line_stripped.startswith('===') or line_stripped.startswith('---'):
             continue
         
-        # Detect section headers (must match exactly at start)
-        if line_stripped.startswith('📊 Temperature:'):
+        # Detect section headers
+        if '📊 Temperature:' in line_stripped:
             current_section = 'temperature'
             continue
-        elif line_stripped.startswith('🔧 Pressure:'):
+        elif '🔧 Pressure:' in line_stripped:
             current_section = 'pressure'
             continue
-        elif line_stripped.startswith('🌬️ Atmosphere:'):
+        elif '🌬️ Atmosphere:' in line_stripped:
             current_section = 'atmosphere'
             continue
-        elif line_stripped.startswith('⏱️ Time Required:'):
+        elif '⏱️ Time Required:' in line_stripped:
             current_section = 'time_required'
             continue
-        elif line_stripped.startswith('🧪 Synthesis Method:'):
+        elif '🧪 Synthesis Method:' in line_stripped:
             current_section = 'synthesis_method'
             continue
-        elif line_stripped.startswith('🔬 Reaction Type:'):
+        elif '🔬 Reaction Type:' in line_stripped:
             current_section = 'reaction_type'
             continue
         
-        # Add content to current section
-        if current_section and line_stripped:
+        # Add content to current section (skip "Reaction:" prefix lines)
+        if current_section and line_stripped and not line_stripped.startswith('Reaction:'):
             conditions[current_section].append(line_stripped)
     
     return conditions
