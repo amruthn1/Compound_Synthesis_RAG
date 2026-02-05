@@ -590,8 +590,12 @@ def display_precursor_combinations_section(result: PipelineResult):
             progress_bar = st.progress(0)
             for idx, combo in enumerate(combinations):
                 evaluation = evaluate_precursor_feasibility(combo, result.final_formula)
+                # Create display name with bold precursors
+                combo_display = ' + '.join([f"**{prec}**" for prec in combo.values()])
+                combo_simple = ' + '.join([f"{elem}: {prec}" for elem, prec in combo.items()])
                 results.append({
-                    'Combination': ' + '.join([f"{elem}: {prec}" for elem, prec in combo.items()]),
+                    'Combination': combo_simple,
+                    'CombinationDisplay': combo_display,
                     'Precursors': combo,
                     'Formation Energy (eV/atom)': f"{evaluation['formation_energy']:.3f}",
                     'Stability': evaluation['stability_rating'],
@@ -654,14 +658,19 @@ def display_precursor_combinations_section(result: PipelineResult):
                     border_color = "orange"
                     emoji = "⚠️"
                 
+                # Create title with bold precursor names
+                precursor_list = ' + '.join([f"**{prec}**" for prec in res['Precursors'].values()])
+                
                 with st.expander(
                     f"{emoji} Combination #{idx} - Score: {res['Feasibility Score']} - {res['Stability']} Stability",
                     expanded=(idx <= 3)
                 ):
-                    # Display precursors
-                    st.markdown("**Precursors:**")
+                    # Display precursors with element mapping in bold
+                    st.markdown(f"**Precursors:** {precursor_list}")
+                    st.markdown("")
+                    st.markdown("*Element Mapping:*")
                     for elem, prec in res['Precursors'].items():
-                        st.markdown(f"- **{elem}**: `{prec}`")
+                        st.markdown(f"- {elem} → **{prec}**")
                     
                     # Display metrics
                     metric_cols = st.columns(4)
