@@ -1180,6 +1180,59 @@ def extract_synthesis_steps(protocol_text: str) -> dict:
     return steps
 
 
+def parse_reaction_conditions(protocol_text: str) -> dict:
+    """Parse the reaction conditions section from synthesis protocol."""
+    conditions = {
+        'temperature': [],
+        'pressure': [],
+        'atmosphere': [],
+        'time_required': [],
+        'synthesis_method': [],
+        'reaction_type': []
+    }
+    
+    if not protocol_text:
+        return conditions
+    
+    lines = protocol_text.split('\n')
+    current_section = None
+    
+    for line in lines:
+        line_stripped = line.strip()
+        
+        # Detect section headers
+        if '📊 Temperature:' in line or 'Temperature:' in line:
+            current_section = 'temperature'
+            continue
+        elif '🔧 Pressure:' in line or 'Pressure:' in line:
+            current_section = 'pressure'
+            continue
+        elif '🌬️ Atmosphere:' in line or 'Atmosphere:' in line:
+            current_section = 'atmosphere'
+            continue
+        elif '⏱️ Time Required:' in line or 'Time Required:' in line:
+            current_section = 'time_required'
+            continue
+        elif '🧪 Synthesis Method:' in line or 'Synthesis Method:' in line:
+            current_section = 'synthesis_method'
+            continue
+        elif '🔬 Reaction Type:' in line or 'Reaction Type:' in line:
+            current_section = 'reaction_type'
+            continue
+        elif line_stripped.startswith('===') or line_stripped.startswith('---'):
+            current_section = None
+            continue
+        elif line_stripped.startswith('🔥 REACTION CONDITIONS') or line_stripped.startswith('1. SAFETY'):
+            current_section = None
+            continue
+        
+        # Add content to current section
+        if current_section and line_stripped and not line_stripped.startswith('##'):
+            conditions[current_section].append(line_stripped)
+    
+    return conditions
+
+
 def display_synthesis_section(result: PipelineResult):
     """Display synthesis protocol with safety."""
     if not result.synthesis_protocol:
@@ -1213,10 +1266,58 @@ def display_synthesis_section(result: PipelineResult):
                 )
     
     # Create sub-tabs for different views
-    synthesis_tabs = st.tabs(["📋 Structured Steps", "📄 Full Protocol"])
+    synthesis_tabs = st.tabs(["🔥 Reaction Conditions", "📋 Detailed Steps", "📄 Full Protocol"])
+    
+    # Reaction Conditions Tab (NEW - formatted nicely)
+    with synthesis_tabs[0]:
+        st.subheader("🔥 Reaction Conditions & Method")
+        
+        # Parse reaction conditions from protocol
+        conditions = parse_reaction_conditions(result.synthesis_protocol)
+        
+        # Temperature Section
+        if conditions['temperature']:
+            st.markdown("### 📊 **Temperature**")
+            for line in conditions['temperature']:
+                st.markdown(line)
+            st.markdown("---")
+        
+        # Pressure Section
+        if conditions['pressure']:
+            st.markdown("### 🔧 **Pressure**")
+            for line in conditions['pressure']:
+                st.markdown(line)
+            st.markdown("---")
+        
+        # Atmosphere Section
+        if conditions['atmosphere']:
+            st.markdown("### 🌬️ **Atmosphere**")
+            for line in conditions['atmosphere']:
+                st.markdown(line)
+            st.markdown("---")
+        
+        # Time Required Section
+        if conditions['time_required']:
+            st.markdown("### ⏱️ **Time Required**")
+            for line in conditions['time_required']:
+                st.markdown(line)
+            st.markdown("---")
+        
+        # Synthesis Method Section
+        if conditions['synthesis_method']:
+            st.markdown("### 🧪 **Synthesis Method**")
+            for line in conditions['synthesis_method']:
+                st.markdown(line)
+            st.markdown("---")
+        
+        # Reaction Type Section
+        if conditions['reaction_type']:
+            st.markdown("### 🔬 **Reaction Type**")
+            for line in conditions['reaction_type']:
+                st.markdown(line)
     
     # Structured Steps Tab
-    with synthesis_tabs[0]:
+    with synthesis_tabs[1]:
         st.subheader("🔬 Synthesis Parameters")
         
         # Extract structured information
