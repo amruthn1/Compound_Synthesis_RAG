@@ -1294,9 +1294,9 @@ def display_synthesis_section(result: PipelineResult):
         # Parse reaction conditions from protocol
         conditions = parse_reaction_conditions(result.synthesis_protocol)
         
-        # Debug: Show first 2000 chars of protocol
-        st.write("DEBUG - First 2000 chars of protocol:")
-        st.code(result.synthesis_protocol[:2000] if result.synthesis_protocol else "No protocol")
+        # Debug: Show first 3000 chars of protocol to see reaction conditions section
+        st.write("DEBUG - First 3000 chars of protocol:")
+        st.code(result.synthesis_protocol[:3000] if result.synthesis_protocol else "No protocol")
         
         # Debug: Show what was parsed
         st.write("DEBUG - Parsed conditions:")
