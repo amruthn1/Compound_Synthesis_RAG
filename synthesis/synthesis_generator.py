@@ -70,7 +70,16 @@ class SynthesisGenerator:
         
         # Header (MANDATORY format)
         sections.append(self.PROTOCOL_HEADER)
-        sections.append(f"\n## Synthesis Protocol for {formula}\n")
+        sections.append(f"\n## Comprehensive Synthesis Protocol for {formula}\n")
+        
+        # Section 0: Reaction Conditions & Method (NEW - prominent display)
+        reaction_conditions_section = self._generate_reaction_conditions_section(
+            formula,
+            composition,
+            precursors,
+            retrieved_papers
+        )
+        sections.append(reaction_conditions_section)
         
         # Section 1: SAFETY (ABSOLUTELY MANDATORY)
         safety_section = self._generate_safety_section(
@@ -124,6 +133,208 @@ class SynthesisGenerator:
         self._validate_protocol(full_protocol)
         
         return full_protocol
+    
+    def _generate_reaction_conditions_section(
+        self,
+        formula: str,
+        composition: Dict[str, float],
+        precursors: List[str],
+        papers: List[Dict]
+    ) -> str:
+        """Generate comprehensive reaction conditions and method section."""
+        lines = []
+        lines.append("="*70)
+        lines.append("🔥 REACTION CONDITIONS & 🧪 METHOD")
+        lines.append("="*70)
+        
+        # Estimate synthesis temperature SPECIFIC to this material
+        temp = self._estimate_synthesis_temperature(composition)
+        
+        # Get material-specific class
+        material_class = self._classify_material(composition)
+        
+        # Temperature section with MATERIAL-SPECIFIC analysis
+        lines.append("\n📊 Temperature:")
+        lines.append(f"  Analyze thermal stability of {', '.join(precursors[:3])} - typically {temp-100}-{temp+100}°C")
+        lines.append(f"  for {material_class} based on precursor decomposition temperatures")
+        lines.append(f"  and solid-state diffusion requirements")
+        lines.append(f"")
+        lines.append(f"  Recommended target: {temp}°C")
+        
+        # Material-specific temperature considerations
+        if 'F' in composition:
+            lines.append(f"  ⚠ Fluoride chemistry: Consider thermal stability of fluoride precursors")
+            if 'Ag' in composition:
+                lines.append(f"  ⚠ AgF2 decomposes above ~200°C - use lower temperatures or sealed crucible")
+            if 'Ba' in composition:
+                lines.append(f"  BaF2 is stable but requires high temps (900-1100°C) for diffusion")
+        
+        if 'Li' in composition or 'Na' in composition or 'K' in composition:
+            lines.append(f"  ⚠ Alkali metals: Lower temperature ({temp-200}-{temp}°C) to prevent volatilization")
+        
+        if 'Ti' in composition or 'Zr' in composition:
+            lines.append(f"  ⚠ Transition metal oxides: Higher temperatures ({temp}-{temp+200}°C) needed")
+        
+        lines.append(f"")
+        lines.append(f"  Heating rate: 5-10°C/min (prevents thermal shock)")
+        lines.append(f"  Hold time: 12-48 hours for complete solid-state diffusion and phase formation")
+        lines.append(f"  Cooling rate: 2-5°C/min (controlled to maintain phase purity)")
+        
+        # Pressure section - SPECIFIC to this material's precursors
+        lines.append("\n🔧 Pressure:")
+        lines.append("  Ambient pressure typically suitable for solid-state ceramic synthesis")
+        
+        # Check for volatile precursors
+        volatile_elements = {'Ag', 'Hg', 'Cd', 'Zn', 'As', 'Sb', 'P'}
+        has_volatile = any(elem in volatile_elements for elem in composition.keys())
+        
+        if has_volatile:
+            volatile_list = [e for e in composition.keys() if e in volatile_elements]
+            lines.append(f"  ⚠ Volatile elements present ({', '.join(volatile_list)})")
+            lines.append(f"  unless precursors have high vapor pressure or oxidation sensitivity requires vacuum")
+        
+        if 'F' in composition or 'Cl' in composition:
+            lines.append(f"  ⚠ Halide precursors may sublime - consider sealed crucible within larger crucible")
+        
+        # Atmosphere section - MATERIAL-SPECIFIC recommendations
+        lines.append("\n🌬️ Atmosphere:")
+        atmosphere_type = self._determine_atmosphere(composition)
+        
+        if 'O' in composition and ('Ti' in composition or 'Fe' in composition or 'Mn' in composition):
+            lines.append(f"  Air or O2 atmosphere for {material_class}")
+            lines.append(f"  Inert atmosphere recommended for fluorides (moisture-sensitive, HF formation risk)")
+        elif 'F' in composition:
+            lines.append(f"  Inert atmosphere recommended for fluorides (moisture-sensitive, HF formation risk)")
+            lines.append(f"  Use dry N2 or Ar (99.99%+ purity) with flow rate 100-200 mL/min")
+            lines.append(f"  ⚠ CRITICAL: Even trace moisture causes HF formation")
+            lines.append(f"  Pass gas through molecular sieve or P2O5 drying column (<5 ppm H2O)")
+        elif 'N' in composition:
+            lines.append(f"  NH3 or N2 atmosphere for nitride formation")
+            lines.append(f"  ⚠ WARNING: NH3 is toxic - use proper ventilation and scrubbing")
+        elif 'O' in composition:
+            lines.append(f"  Air or oxygen atmosphere suitable for oxide synthesis")
+        else:
+            lines.append(f"  Inert atmosphere (Ar or N2, 99.9%+) to prevent oxidation")
+        
+        # Time section with SPECIFIC breakdown for this material
+        lines.append("\n⏱️ Time Required:")
+        heating_time = int((temp - 25) / 5 / 60)  # hours at 5°C/min
+        lines.append(f"  Heating phase: 3-5 hours to reach target temperature at controlled rate (5-10°C/min)")
+        lines.append(f"                 ({heating_time}-{heating_time*2} hours to reach {temp}°C)")
+        
+        # Material-specific reaction time
+        if 'F' in composition and len(composition) > 3:
+            lines.append(f"  Reaction phase: 12-48 hours hold at temperature for complete solid-state diffusion")
+            lines.append(f"                  and phase formation; Complex fluoride ({len(composition)} elements)")
+            lines.append(f"                  requires longer time (24-48h recommended)")
+        elif material_class == 'complex oxide':
+            lines.append(f"  Reaction phase: 18-36 hours (complex oxide with multiple cations)")
+        else:
+            lines.append(f"  Reaction phase: 12-24 hours hold at temperature")
+        
+        lines.append(f"  Cooling phase: 6-12 hours controlled cooling (2-5°C/min)")
+        lines.append(f"  Multiple cycles may be needed with intermediate grinding for phase purity")
+        
+        total_min = heating_time + 12 + 6
+        total_max = heating_time*2 + 48 + 12
+        lines.append(f"  Total estimated time: {total_min}-{total_max} hours (single cycle)")
+        
+        lines.append("\n" + "-"*70)
+        
+        # Method & Type section - SPECIFIC to this material
+        lines.append("\n🧪 Synthesis Method:")
+        lines.append(f"  Solid-state reaction method: Intimately mix precursor powders via grinding,")
+        lines.append(f"  compact into pellet to maximize contact area, heat to enable solid-state")
+        lines.append(f"  diffusion and reaction between phases")
+        
+        lines.append("\n🔬 Reaction Type:")
+        # Generate ACTUAL reaction equation with specific precursors
+        reaction_eq = self._generate_reaction_equation(formula, composition, precursors)
+        lines.append(f"  Solid-state reaction forming {formula} from precursors")
+        lines.append(f"  {', '.join(precursors)} via high-temperature diffusion and phase formation")
+        lines.append(f"")
+        lines.append(f"  Reaction: {reaction_eq}")
+        
+        lines.append("\n" + "="*70)
+        
+        return "\n".join(lines)
+    
+    def _classify_material(self, composition: Dict[str, float]) -> str:
+        """Classify material type based on composition."""
+        if 'O' in composition:
+            if len(composition) > 3:
+                return 'complex oxide'
+            return 'metal oxide'
+        elif 'F' in composition:
+            if len(composition) > 3:
+                return 'complex metal fluoride'
+            return 'metal fluoride'
+        elif 'N' in composition:
+            return 'metal nitride'
+        elif 'S' in composition:
+            return 'metal sulfide'
+        elif 'Cl' in composition:
+            return 'metal chloride'
+        else:
+            return 'intermetallic compound'
+    
+    def _determine_atmosphere(self, composition: Dict[str, float]) -> str:
+        """Determine appropriate atmosphere for synthesis."""
+        if 'O' in composition:
+            return 'air/O2'
+        elif 'F' in composition:
+            return 'dry inert (N2/Ar)'
+        elif 'N' in composition:
+            return 'NH3/N2'
+        else:
+            return 'inert (Ar/N2)'
+    
+    def _generate_reaction_equation(
+        self,
+        formula: str,
+        composition: Dict[str, float],
+        precursors: List[str]
+    ) -> str:
+        """Generate balanced reaction equation with specific precursors."""
+        from pymatgen.core import Composition
+        
+        try:
+            # Create reaction string
+            target_comp = Composition(formula)
+            
+            # Calculate stoichiometric coefficients
+            precursor_parts = []
+            for prec in precursors:
+                prec_comp = Composition(prec)
+                
+                # Find coefficient based on element conservation
+                coeff = 1.0
+                for elem in prec_comp.elements:
+                    elem_str = str(elem)
+                    if elem_str in composition:
+                        target_amount = composition[elem_str]
+                        prec_amount = prec_comp[elem]
+                        ratio = target_amount / prec_amount
+                        if ratio > coeff:
+                            coeff = ratio
+                
+                if coeff != 1.0:
+                    precursor_parts.append(f"{coeff:.2f} {prec}")
+                else:
+                    precursor_parts.append(prec)
+            
+            reaction = f"{' + '.join(precursor_parts)} → {formula}"
+            
+            # Add byproducts if carbonates are used
+            if any('CO3' in p for p in precursors):
+                reaction += " + CO2↑"
+            if any('OH' in p for p in precursors):
+                reaction += " + H2O↑"
+            
+            return reaction
+        except:
+            # Fallback to simple representation
+            return f"{' + '.join(precursors)} → {formula}"
     
     def _generate_safety_section(
         self,
