@@ -487,6 +487,79 @@ def display_properties_section(result: PipelineResult):
                 st.metric(name, f"{value:.3f}" if isinstance(value, float) else value)
 
 
+def extract_synthesis_steps(protocol_text: str) -> dict:
+    """Extract structured synthesis parameters from protocol text."""
+    import re
+    
+    steps = {
+        'temperatures': {},
+        'heating_rates': [],
+        'holding_times': [],
+        'atmosphere': [],
+        'steps': []
+    }
+    
+    if not protocol_text:
+        return steps
+    
+    lines = protocol_text.split('\n')
+    
+    # Extract temperatures (look for patterns like "800°C", "900 C", etc.)
+    temp_pattern = r'(\d+)[-–]?(\d+)?\s*[°]?[CcKk]'
+    for line in lines:
+        temps = re.findall(temp_pattern, line)
+        line_lower = line.lower()
+        
+        if temps:
+            for temp in temps:
+                temp_val = f"{temp[0]}{'-' + temp[1] if temp[1] else ''}°C"
+                
+                if 'calcin' in line_lower:
+                    steps['temperatures']['Calcination'] = temp_val
+                elif 'sinter' in line_lower:
+                    steps['temperatures']['Sintering'] = temp_val
+                elif 'anneal' in line_lower:
+                    steps['temperatures']['Annealing'] = temp_val
+                elif 'heat' in line_lower or 'temperature' in line_lower:
+                    if 'Target Temperature' not in steps['temperatures']:
+                        steps['temperatures']['Target Temperature'] = temp_val
+    
+    # Extract heating/cooling rates (e.g., "5°C/min", "10 K/min")
+    rate_pattern = r'(\d+\.?\d*)\s*[°]?[CcKk]/min'
+    for line in lines:
+        rates = re.findall(rate_pattern, line)
+        for rate in rates:
+            if rate not in steps['heating_rates']:
+                steps['heating_rates'].append(f"{rate}°C/min")
+    
+    # Extract holding times (e.g., "2 hours", "4h", "6 hrs")
+    time_pattern = r'(\d+\.?\d*)\s*(hours?|hrs?|h\b)'
+    for line in lines:
+        times = re.findall(time_pattern, line, re.IGNORECASE)
+        for time in times:
+            time_str = f"{time[0]} {time[1]}"
+            if time_str not in steps['holding_times']:
+                steps['holding_times'].append(time_str)
+    
+    # Extract atmosphere mentions
+    atmosphere_keywords = ['air', 'argon', 'nitrogen', 'vacuum', 'oxygen', 'inert', 'atmosphere']
+    for line in lines:
+        line_lower = line.lower()
+        for keyword in atmosphere_keywords:
+            if keyword in line_lower and line.strip():
+                steps['atmosphere'].append(line.strip())
+                break
+    
+    # Extract numbered steps
+    step_pattern = r'^\s*(\d+[\.\)]|\([a-z]\)|\*|\-)\s+(.+)'
+    for line in lines:
+        match = re.match(step_pattern, line)
+        if match and len(match.group(2).strip()) > 10:  # Meaningful step
+            steps['steps'].append(match.group(2).strip())
+    
+    return steps
+
+
 def display_synthesis_section(result: PipelineResult):
     """Display synthesis protocol with safety."""
     if not result.synthesis_protocol:
@@ -519,18 +592,77 @@ def display_synthesis_section(result: PipelineResult):
                     unsafe_allow_html=True
                 )
     
-    # Display full protocol
-    st.subheader("Complete Synthesis Protocol")
+    # Create sub-tabs for different views
+    synthesis_tabs = st.tabs(["📋 Structured Steps", "📄 Full Protocol"])
     
-    # Use text area for better formatting
-    st.text_area(
-        "Protocol",
-        value=result.synthesis_protocol,
-        height=600,
-        label_visibility="collapsed"
-    )
+    # Structured Steps Tab
+    with synthesis_tabs[0]:
+        st.subheader("🔬 Synthesis Parameters")
+        
+        # Extract structured information
+        extracted = extract_synthesis_steps(result.synthesis_protocol)
+        
+        # Display temperatures
+        if extracted['temperatures']:
+            st.markdown("#### 🌡️ Temperatures")
+            temp_cols = st.columns(len(extracted['temperatures']))
+            for i, (temp_type, temp_val) in enumerate(extracted['temperatures'].items()):
+                with temp_cols[i]:
+                    st.metric(temp_type, temp_val)
+        
+        # Display rates and times
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            if extracted['heating_rates']:
+                st.markdown("#### 📈 Heating/Cooling Rates")
+                for rate in extracted['heating_rates']:
+                    st.markdown(f"- {rate}")
+            else:
+                st.markdown("#### 📈 Heating/Cooling Rates")
+                st.info("Typical range: 3-5°C/min (recommended)")
+        
+        with col2:
+            if extracted['holding_times']:
+                st.markdown("#### ⏱️ Holding Times")
+                for time in extracted['holding_times']:
+                    st.markdown(f"- {time}")
+            else:
+                st.markdown("#### ⏱️ Holding Times")
+                st.info("Typical range: 4-6 hours (recommended)")
+        
+        # Display atmosphere
+        if extracted['atmosphere']:
+            st.markdown("#### 🌬️ Atmosphere")
+            for atm in extracted['atmosphere']:
+                st.markdown(f"- {atm}")
+        
+        # Display clean step-by-step
+        if extracted['steps']:
+            st.markdown("#### 📝 Synthesis Steps")
+            for i, step in enumerate(extracted['steps'], 1):
+                st.markdown(f"**Step {i}:** {step}")
+        else:
+            # Fallback: show protocol with better formatting
+            st.markdown("#### 📝 Synthesis Steps")
+            protocol_lines = [line.strip() for line in result.synthesis_protocol.split('\n') if line.strip()]
+            for i, line in enumerate(protocol_lines[:20], 1):  # Show first 20 meaningful lines
+                if len(line) > 10:
+                    st.markdown(f"{i}. {line}")
     
-    # Download button
+    # Full Protocol Tab
+    with synthesis_tabs[1]:
+        st.subheader("Complete Synthesis Protocol")
+        
+        # Use text area for better formatting
+        st.text_area(
+            "Protocol",
+            value=result.synthesis_protocol,
+            height=600,
+            label_visibility="collapsed"
+        )
+    
+    # Download button (outside tabs)
     st.download_button(
         label="📥 Download Protocol",
         data=result.synthesis_protocol,
