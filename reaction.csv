@@ -41,3 +41,23 @@ Cs2Rb2Co2F8,"CsF, RbF, CoF2",2 CsF + 2 RbF + 2 CoF2 ‚Üí Cs2Rb2Co2F8
 Rb3Sr1Fe2Ag2F12,"RbF, SrF2, FeF3, AgF2",3 RbF + SrF2 + 2 FeF3 + 2 AgF2 ‚Üí Rb3SrFe2Ag2F12
 Cs2Rb2Cr2F12,"CsF, RbF, CrF3",2 CsF + 2 RbF + 2 CrF3 ‚Üí Cs2Rb2Cr2F12
 Cs2Ce4F14,"CsF, CeF3",Cs2Ce4F14
+Cs1Pb1Cl3,"CsCl, PbCl2",CsCl + PbCl2 → CsPbCl3 
+Ca2Mg1Tl1,"Ca, Mg, Tl",2 Ca + Mg + Tl → Ca2MgTl 
+Li1Pm1In2,"Li, Pm, In",Li + Pm + 2 In → LiPmIn2 
+Lu1Si2,"Lu, Si",Lu + 2 Si → LuSi2 
+Ta1Sb1Pd1,"Ta, Sb, Pd",Ta + Sb + Pd → TaSbPd 
+Te3Mo1W1S1,"Te, Mo, W, S",3 Te + Mo + W + S → Te3MoWS 
+Co2P1O6,"Co, P, O",2 Co + P + 6 O → Co2PO6 
+Np1Ni1Sn1,"Np, Ni, Sn",Np + Ni + Sn → NpNiSn 
+Pd3Au1,"Pd, Au",3 Pd + Au → Pd3Au 
+Cr1O1F1,"Cr, O, F",Cr + O + F → CrOF 
+Y1N1,"Y, N",Y + N → YN 
+Tm2In1Hg1,"Tm, In, Hg",2 Tm + In + Hg → Tm2InHg 
+Lu2Cu1Os1,"Lu, Cu, Os",2 Lu + Cu + Os → Lu2CuOs 
+Cs1In1I3,"CsI, InI3",CsI + InI3 → CsInI3 
+Na1Ac1Hg2,"Na, Ac, Hg",Na + Ac + 2 Hg → NaAcHg2 
+Tb1Cd1Cu4,"Tb, Cd, Cu",Tb + Cd + 4 Cu → TbCdCu4 
+Cs2Rb1Ru1F6,"CsF, RbF, RuF3",2 CsF + RbF + RuF3 → Cs2RbRuF6 
+Nd2Pd1Rh1,"Nd, Pd, Rh",2 Nd + Pd + Rh → Nd2PdRh 
+K1Al1Ni1F6,"KF, AlF3, NiF2",KF + AlF3 + NiF2 → KAlNiF6 
+Al1Si1Os2,"Al, Si, Os",Al + Si + 2 Os → AlSiOs2

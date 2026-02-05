@@ -366,6 +366,32 @@ class MaterialsPipeline:
                 print("  ✓ CIF generated successfully")
                 print(f"  Lines: {len(cif_content.split(chr(10)))}")
                 
+                # CRITICAL: Relax structure with AlignFF (one pass)
+                print("  🔬 Relaxing structure with AlignFF...")
+                try:
+                    relaxation_props = self.alignff_predictor.predict_properties(
+                        composition=final_composition,
+                        cif_content=cif_content
+                    )
+                    
+                    # Update CIF with relaxed structure if available
+                    if 'relaxed_structure' in relaxation_props:
+                        cif_content = self.cif_generator._structure_to_cif(
+                            relaxation_props['relaxed_structure'],
+                            formula=final_formula,
+                            title=f"{final_formula} (AlignFF Relaxed)"
+                        )
+                        cif_metadata['source'] = 'AlignFF-relaxed structure'
+                        print("  ✓ Structure relaxed and CIF updated")
+                        print(f"  Post-relaxation energy: {relaxation_props.get('formation_energy_eV_atom', 'N/A')} eV/atom")
+                    else:
+                        print("  ⚠ Relaxation completed but no structure returned")
+                        
+                except Exception as relax_error:
+                    print(f"  ⚠ Relaxation failed: {relax_error}")
+                    warnings.append(f"Structure relaxation failed: {relax_error}")
+                    # Continue with unrelaxed CIF
+                
             except Exception as e:
                 errors.append(f"CIF generation failed: {e}")
                 warnings.append("Continuing without CIF")

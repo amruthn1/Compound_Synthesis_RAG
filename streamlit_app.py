@@ -427,6 +427,221 @@ def display_literature_section(result: PipelineResult):
                 st.markdown(f"[View Paper]({paper['url']})")
 
 
+def display_explorer_page(pipeline):
+    """Interactive material variation explorer."""
+    st.header("🎨 Material Variation Explorer")
+    st.markdown("""
+    Generate and compare material variations with AlignFF-relaxed structures and predicted properties.
+    All structures are automatically relaxed before property prediction.
+    """)
+    
+    col1, col2 = st.columns([2, 1])
+    
+    with col1:
+        base_material = st.text_input(
+            "Base Material Formula",
+            value="K2Cu4F10",
+            help="Enter a chemical formula to explore variations"
+        )
+    
+    with col2:
+        st.metric("Relaxation Method", "AlignFF", help="All structures are automatically relaxed")
+    
+    st.subheader("Select Element Substitutions")
+    
+    # Predefined substitution options
+    col1, col2, col3 = st.columns(3)
+    
+    with col1:
+        st.markdown("**Transition Metals**")
+        sub_cu_ni = st.checkbox("Cu → Ni", value=True)
+        sub_cu_ag = st.checkbox("Cu → Ag", value=True)
+        sub_cu_zn = st.checkbox("Cu → Zn", value=True)
+        sub_cu_co = st.checkbox("Cu → Co")
+        sub_fe_co = st.checkbox("Fe → Co")
+        sub_fe_ni = st.checkbox("Fe → Ni")
+    
+    with col2:
+        st.markdown("**Alkali/Alkaline Earth**")
+        sub_k_na = st.checkbox("K → Na")
+        sub_k_li = st.checkbox("K → Li")
+        sub_k_rb = st.checkbox("K → Rb")
+        sub_na_li = st.checkbox("Na → Li")
+        sub_ca_sr = st.checkbox("Ca → Sr")
+        sub_ba_sr = st.checkbox("Ba → Sr")
+    
+    with col3:
+        st.markdown("**Other Elements**")
+        sub_ti_zr = st.checkbox("Ti → Zr")
+        sub_ti_hf = st.checkbox("Ti → Hf")
+        sub_o_s = st.checkbox("O → S")
+        sub_o_se = st.checkbox("O → Se")
+    
+    # Collect selected substitutions
+    substitutions_map = {
+        'Cu → Ni': {'Cu': 'Ni'} if sub_cu_ni else None,
+        'Cu → Ag': {'Cu': 'Ag'} if sub_cu_ag else None,
+        'Cu → Zn': {'Cu': 'Zn'} if sub_cu_zn else None,
+        'Cu → Co': {'Cu': 'Co'} if sub_cu_co else None,
+        'Fe → Co': {'Fe': 'Co'} if sub_fe_co else None,
+        'Fe → Ni': {'Fe': 'Ni'} if sub_fe_ni else None,
+        'K → Na': {'K': 'Na'} if sub_k_na else None,
+        'K → Li': {'K': 'Li'} if sub_k_li else None,
+        'K → Rb': {'K': 'Rb'} if sub_k_rb else None,
+        'Na → Li': {'Na': 'Li'} if sub_na_li else None,
+        'Ca → Sr': {'Ca': 'Sr'} if sub_ca_sr else None,
+        'Ba → Sr': {'Ba': 'Sr'} if sub_ba_sr else None,
+        'Ti → Zr': {'Ti': 'Zr'} if sub_ti_zr else None,
+        'Ti → Hf': {'Ti': 'Hf'} if sub_ti_hf else None,
+        'O → S': {'O': 'S'} if sub_o_s else None,
+        'O → Se': {'O': 'Se'} if sub_o_se else None,
+    }
+    
+    selected_subs = {k: v for k, v in substitutions_map.items() if v is not None}
+    
+    st.markdown("---")
+    
+    if st.button("🚀 Explore Variations", type="primary"):
+        
+        if not base_material:
+            st.error("Please enter a base material formula")
+            st.stop()
+        
+        if len(selected_subs) == 0:
+            st.error("Please select at least one substitution")
+            st.stop()
+        
+        with st.spinner(f"Exploring {len(selected_subs) + 1} material variations (with AlignFF relaxation)..."):
+            results = []
+            progress_bar = st.progress(0)
+            status_text = st.empty()
+            
+            # Process base material
+            status_text.text(f"Processing base material: {base_material}")
+            try:
+                result = pipeline.run_materials_pipeline(
+                    composition=base_material,
+                    substitutions=None,
+                    generate_cif=True,
+                    predict_properties=True,
+                    generate_synthesis=False,
+                    retrieve_top_k=0
+                )
+                
+                if result.success and result.predicted_properties:
+                    results.append({
+                        'Formula': base_material,
+                        'Variation': 'Original',
+                        'Formation Energy (eV/atom)': result.predicted_properties.get('formation_energy_eV_atom', float('nan')),
+                        'Band Gap (eV)': result.predicted_properties.get('band_gap_eV', float('nan')),
+                        'Density (g/cm³)': result.predicted_properties.get('density_g_cm3', float('nan')),
+                        'Status': '✓'
+                    })
+            except Exception as e:
+                st.warning(f"Base material failed: {str(e)[:100]}")
+            
+            progress_bar.progress(1 / (len(selected_subs) + 1))
+            
+            # Process variations
+            for i, (sub_name, sub_dict) in enumerate(selected_subs.items(), 1):
+                status_text.text(f"Processing variation {i}/{len(selected_subs)}: {sub_name}")
+                
+                try:
+                    result = pipeline.run_materials_pipeline(
+                        composition=base_material,
+                        substitutions=sub_dict,
+                        generate_cif=True,
+                        predict_properties=True,
+                        generate_synthesis=False,
+                        retrieve_top_k=0
+                    )
+                    
+                    if result.success and result.predicted_properties:
+                        results.append({
+                            'Formula': result.final_formula,
+                            'Variation': sub_name,
+                            'Formation Energy (eV/atom)': result.predicted_properties.get('formation_energy_eV_atom', float('nan')),
+                            'Band Gap (eV)': result.predicted_properties.get('band_gap_eV', float('nan')),
+                            'Density (g/cm³)': result.predicted_properties.get('density_g_cm3', float('nan')),
+                            'Status': '✓'
+                        })
+                except Exception as e:
+                    st.warning(f"{sub_name} failed: {str(e)[:100]}")
+                
+                progress_bar.progress((i + 1) / (len(selected_subs) + 1))
+            
+            status_text.empty()
+            progress_bar.empty()
+        
+        # Display results
+        if len(results) > 0:
+            st.success(f"✓ Explored {len(results)} material variations successfully!")
+            
+            st.markdown("---")
+            st.subheader("📊 Results Comparison")
+            
+            df = pd.DataFrame(results)
+            
+            # Display styled dataframe
+            st.dataframe(
+                df.style.format({
+                    'Formation Energy (eV/atom)': '{:.4f}',
+                    'Band Gap (eV)': '{:.3f}',
+                    'Density (g/cm³)': '{:.3f}'
+                }).background_gradient(subset=['Formation Energy (eV/atom)'], cmap='RdYlGn_r'),
+                use_container_width=True,
+                height=400
+            )
+            
+            # Key insights
+            if len(df) > 1:
+                st.markdown("---")
+                st.subheader("🔍 Key Insights")
+                
+                col1, col2, col3 = st.columns(3)
+                
+                with col1:
+                    most_stable_idx = df['Formation Energy (eV/atom)'].idxmin()
+                    most_stable = df.loc[most_stable_idx]
+                    st.metric(
+                        "🏆 Most Stable",
+                        most_stable['Formula'],
+                        f"{most_stable['Formation Energy (eV/atom)']:.4f} eV/atom",
+                        help="Lowest formation energy indicates highest thermodynamic stability"
+                    )
+                
+                with col2:
+                    largest_gap_idx = df['Band Gap (eV)'].idxmax()
+                    largest_gap = df.loc[largest_gap_idx]
+                    st.metric(
+                        "🔋 Largest Band Gap",
+                        largest_gap['Formula'],
+                        f"{largest_gap['Band Gap (eV)']:.3f} eV",
+                        help="Larger band gap indicates better insulating properties"
+                    )
+                
+                with col3:
+                    smallest_gap_idx = df['Band Gap (eV)'].idxmin()
+                    smallest_gap = df.loc[smallest_gap_idx]
+                    st.metric(
+                        "⚡ Smallest Band Gap",
+                        smallest_gap['Formula'],
+                        f"{smallest_gap['Band Gap (eV)']:.3f} eV",
+                        help="Smaller band gap may indicate semiconducting or conducting behavior"
+                    )
+            
+            # Download button
+            csv_data = df.to_csv(index=False)
+            st.download_button(
+                label="📥 Download Results (CSV)",
+                data=csv_data,
+                file_name=f"{base_material}_variations.csv",
+                mime="text/csv"
+            )
+        else:
+            st.error("❌ No successful results. Please try different substitutions or base material.")
+
+
 def main():
     """Main Streamlit app."""
     
@@ -457,46 +672,61 @@ def main():
             except Exception as e:
                 st.error(f"Failed to populate database: {e}")
     
-    # Sidebar
-    options = display_sidebar()
+    # Page selection
+    page = st.sidebar.radio(
+        "Navigation",
+        ["🚀 Single Material", "🎨 Variation Explorer"],
+        help="Choose between single material analysis or exploring multiple variations"
+    )
     
-    # Input section
-    composition, substitutions = display_input_section()
+    st.sidebar.markdown("---")
     
-    # Run button
-    if st.button("🚀 Run Pipeline", type="primary"):
+    # Sidebar (for single material options)
+    if page == "🚀 Single Material":
+        options = display_sidebar()
+    
+    # Route to appropriate page
+    if page == "🎨 Variation Explorer":
+        display_explorer_page(pipeline)
+    else:
+        # Original single material workflow
+        # Input section
+        composition, substitutions = display_input_section()
         
-        # Validate input
-        if not composition:
-            st.error("Please enter a chemical formula")
-            st.stop()
-        
-        # Run pipeline (THE ONLY SOURCE OF LOGIC)
-        with st.spinner("Running materials discovery pipeline..."):
-            try:
-                result = pipeline.run_materials_pipeline(
-                    composition=composition,
-                    substitutions=substitutions,
-                    generate_cif=options['generate_cif'],
-                    predict_properties=options['predict_properties'],
-                    generate_synthesis=options['generate_synthesis'],
-                    scrape_papers=options['scrape_papers'],
-                    retrieve_top_k=options['retrieve_top_k']
-                )
-                
-                # Store in session state
-                st.session_state['last_result'] = result
-                
-            except Exception as e:
-                st.error(f"Pipeline failed: {e}")
-                import traceback
-                st.code(traceback.format_exc())
+        # Run button
+        if st.button("🚀 Run Pipeline", type="primary"):
+            
+            # Validate input
+            if not composition:
+                st.error("Please enter a chemical formula")
                 st.stop()
-    
-    # Display results
-    if 'last_result' in st.session_state:
-        st.markdown("---")
-        display_results(st.session_state['last_result'])
+            
+            # Run pipeline (THE ONLY SOURCE OF LOGIC)
+            with st.spinner("Running materials discovery pipeline..."):
+                try:
+                    result = pipeline.run_materials_pipeline(
+                        composition=composition,
+                        substitutions=substitutions,
+                        generate_cif=options['generate_cif'],
+                        predict_properties=options['predict_properties'],
+                        generate_synthesis=options['generate_synthesis'],
+                        scrape_papers=options['scrape_papers'],
+                        retrieve_top_k=options['retrieve_top_k']
+                    )
+                    
+                    # Store in session state
+                    st.session_state['last_result'] = result
+                    
+                except Exception as e:
+                    st.error(f"Pipeline failed: {e}")
+                    import traceback
+                    st.code(traceback.format_exc())
+                    st.stop()
+        
+        # Display results
+        if 'last_result' in st.session_state:
+            st.markdown("---")
+            display_results(st.session_state['last_result'])
     
     # Footer
     st.markdown("---")
