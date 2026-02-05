@@ -1294,16 +1294,12 @@ def display_synthesis_section(result: PipelineResult):
         # Parse reaction conditions from protocol
         conditions = parse_reaction_conditions(result.synthesis_protocol)
         
-        # Debug: Show first 3000 chars of protocol to see reaction conditions section
-        st.write("DEBUG - First 3000 chars of protocol:")
-        st.code(result.synthesis_protocol[:3000] if result.synthesis_protocol else "No protocol")
+        # Check if we got any data - if not, the protocol might be missing the section
+        has_data = any(len(v) > 0 for v in conditions.values())
         
-        # Debug: Show what was parsed
-        st.write("DEBUG - Parsed conditions:")
-        for key, val in conditions.items():
-            st.write(f"{key}: {len(val)} items")
-            if val:
-                st.write(f"  First item: {val[0][:100] if val[0] else 'empty'}...")
+        if not has_data:
+            st.warning("⚠️ Reaction conditions section not found in protocol. Please regenerate the synthesis by entering a new formula or clicking 'Run Pipeline' again.")
+            st.info("The protocol may be from an older version. The reaction conditions section (🔥 REACTION CONDITIONS & 🧪 METHOD) should appear before the Safety Protocols section.")
         
         # Use columns for side-by-side display
         col1, col2 = st.columns([1, 1])
@@ -1323,7 +1319,7 @@ def display_synthesis_section(result: PipelineResult):
                     unsafe_allow_html=True
                 )
             else:
-                st.write("No temperature data")
+                st.write("No temperature data available")
             
             # Pressure Section
             if conditions['pressure']:
@@ -1333,7 +1329,7 @@ def display_synthesis_section(result: PipelineResult):
                     unsafe_allow_html=True
                 )
             else:
-                st.write("No pressure data")
+                st.write("No pressure data available")
             
             # Atmosphere Section
             if conditions['atmosphere']:
@@ -1343,7 +1339,7 @@ def display_synthesis_section(result: PipelineResult):
                     unsafe_allow_html=True
                 )
             else:
-                st.write("No atmosphere data")
+                st.write("No atmosphere data available")
             
             # Time Required Section
             if conditions['time_required']:
@@ -1353,7 +1349,7 @@ def display_synthesis_section(result: PipelineResult):
                     unsafe_allow_html=True
                 )
             else:
-                st.write("No time data")
+                st.write("No time data available")
         
         with col2:
             # Section header with emoji
@@ -1370,7 +1366,7 @@ def display_synthesis_section(result: PipelineResult):
                     unsafe_allow_html=True
                 )
             else:
-                st.write("No synthesis method data")
+                st.write("No synthesis method data available")
             
             # Reaction Type Section
             if conditions['reaction_type']:
@@ -1380,7 +1376,7 @@ def display_synthesis_section(result: PipelineResult):
                     unsafe_allow_html=True
                 )
             else:
-                st.write("No reaction type data")
+                st.write("No reaction type data available")
     
     # Structured Steps Tab
     with synthesis_tabs[1]:
