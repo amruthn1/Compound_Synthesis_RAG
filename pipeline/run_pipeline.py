@@ -22,6 +22,7 @@ from prediction.alignff_predict import AlignFFPredictor
 from prediction.matgl_predict import MatGLPredictor
 from synthesis.hazard_detection import HazardDetector
 from synthesis.synthesis_generator import SynthesisGenerator
+from evaluation.rag_evaluator import RAGEvaluator
 
 
 @dataclass
@@ -411,8 +412,15 @@ class MaterialsPipeline:
                         title=paper.title,
                         abstract=paper.abstract,
                         metadata={
+                            'source': paper.source,
+                            'source_id': paper.source_id,
                             'doi': paper.doi,
                             'pmid': paper.pmid,
+                            'authors': ', '.join(paper.authors[:5]),
+                            'journal': paper.journal,
+                            'year': paper.year,
+                            'target_material': paper.target_material or final_formula,
+                            'precursors': ', '.join(paper.precursors or precursors),
                             'url': paper.url,
                             'material': final_formula
                         }
@@ -716,15 +724,16 @@ class MaterialsPipeline:
                                 abstract=paper.abstract,
                                 full_text=paper.full_text,
                                 metadata={
-                                    'source': 'pubmed' if paper.pmid else 'arxiv',
+                                    'source': paper.source,
+                                    'source_id': paper.source_id,
                                     'doi': paper.doi,
                                     'pmid': paper.pmid,
                                     'authors': ', '.join(paper.authors[:5]),
                                     'journal': paper.journal,
                                     'year': paper.year,
                                     'url': paper.url,
-                                    'related_material': composition,
-                                    'related_precursors': precursors_str
+                                    'related_material': paper.target_material or composition,
+                                    'related_precursors': ', '.join(paper.precursors or precursors_list)
                                 }
                             )
                             paper_count += 1
@@ -766,6 +775,39 @@ class MaterialsPipeline:
                 'matgl': self.matgl_predictor is not None
             }
         }
+
+    def evaluate_rag_f1(
+        self,
+        benchmark_cases: List[Dict[str, Any]],
+        default_top_k: int = 5
+    ) -> Dict[str, Any]:
+        """
+        Evaluate retrieval quality with precision/recall/F1.
+
+        Args:
+            benchmark_cases: List of benchmark case dictionaries
+            default_top_k: Fallback top-k when case does not provide one
+
+        Returns:
+            Dict with summary and per-case metrics
+        """
+        evaluator = RAGEvaluator(self.retriever)
+        return evaluator.evaluate_retrieval(
+            benchmark_cases=benchmark_cases,
+            default_top_k=default_top_k
+        )
+
+    def evaluate_rag_f1_from_file(
+        self,
+        benchmark_path: str,
+        default_top_k: int = 5
+    ) -> Dict[str, Any]:
+        """Evaluate retrieval quality from a benchmark JSON file."""
+        evaluator = RAGEvaluator(self.retriever)
+        return evaluator.evaluate_retrieval_from_file(
+            benchmark_path=benchmark_path,
+            default_top_k=default_top_k
+        )
 
 
 def save_result_to_json(result: PipelineResult, output_path: str):
